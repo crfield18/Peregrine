@@ -2575,6 +2575,12 @@ class Molecule:
             centre += atomObj.Coordinates * atomObj.AtomicMass
         return centre / self.MolecularMass
 
+    def GetCentreOfCoordinates(self) -> np.ndarray:
+        centre = np.array([0.0, 0.0, 0.0])
+        for atomObj in self.AtomsList:
+            centre += atomObj.Coordinates
+        return centre / self.NumberOfAtoms
+
     def GetMoleculeRadius(self) -> float:
         radius = 0
         mid_point = self.GetCentreOfMass()
@@ -5172,6 +5178,8 @@ crest {self.Identifier}.toml > {self.Identifier}.out"""
                 Label=atomObj.Label,
                 UpdateAtomLabels=UpdateAtomLabels,
             )
+            if atomObj.SMARTSCentre is not None:
+                self.AtomsList[-1].SMARTSCentre = atomObj.SMARTSCentre
         # Add Bonds
         for atomIdx1 in range(MoleculeToAdd.NumberOfAtoms):
             new_atomIdx1 = atomIdx1 + og_NumberOfAtoms
