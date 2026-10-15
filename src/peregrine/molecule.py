@@ -3476,6 +3476,10 @@ class Molecule:
         for sub_SMARTS in SMARTS.split("]"):
             if sub_SMARTS == "":
                 continue
+            if "=" == sub_SMARTS[0] and sub_SMARTS[1:].isdigit():
+                continue 
+            if "[" not in sub_SMARTS:
+                continue
             sub_SMARTS = sub_SMARTS.split("[")[-1]
             try:
                 rdkitAtomObj_idx = int(sub_SMARTS.split(":")[-1])
@@ -3483,7 +3487,10 @@ class Molecule:
                     f"[{sub_SMARTS}]"
                 )
             except ValueError:
+                print(f"Could not parse SMARTS pattern: {sub_SMARTS}")
+                print(SMARTS)
                 print(self.Identifier)
+                print("")
                 return None
 
         # Edit SMARTS string
@@ -3564,7 +3571,7 @@ class Molecule:
         AtomObject: Atom | None = None,
         AtomLabel: str | None = None,
         TopologicalRadius: int = 3,
-    ) -> tuple["Molecule", str]:
+    ) -> "Molecule":
         if AtomIndex is not None:
             pass
         elif AtomObject is not None:
@@ -4322,7 +4329,6 @@ crest {self.Identifier}.toml > {self.Identifier}.out"""
         BondOrderMatrix = BondOrderMatrix.round(0)
         molObj = cls(Identifier, AtomsList, BondOrderMatrix)
         return molObj
-
 
     @classmethod
     def ReadMolString(cls, mol_string: str) -> "Molecule":
@@ -6194,15 +6200,15 @@ crest {self.Identifier}.toml > {self.Identifier}.out"""
         # TODO: Universal heteroatom SMARTS
         planar_SMARTS: list[str] = [
             "[C:1](=[O:2])[N:3]",
-            "[#6X3,#7X3:1]1~[#6X3,#7X2:2]~[#6X3,#7X2:3]~[#6X3,#7X2:4]~[#6X3,#7X2:5]~1",  # Not bonded to metal
-            "[#6X3,#7X3:1]1~[#6X3,#7X3:2]~[#6X3,#7X2:3]~[#6X3,#7X2:4]~[#6X3,#7X2:5]~1",  # Bonded to metal ortho pos
-            "[#6X3,#7X3:1]1~[#6X3,#7X2:2]~[#6X3,#7X3:3]~[#6X3,#7X2:4]~[#6X3,#7X2:5]~1",  # Bonded to metal meta pos
-            "[#8X2,#16X2:1]1~[#6X3,#7X2:2]~[#6X3,#7X2:3]~[#6X3,#7X2:4]~[#6X3,#7X2:5]~1",  # Not bonded to metal
-            "[#8X3,#16X3:1]1~[#6X3,#7X2:2]~[#6X3,#7X2:3]~[#6X3,#7X2:4]~[#6X3,#7X2:5]~1",  # Bonded to chalgogen
-            "[#8X2,#16X2:1]1~[#6X3,#7X3:2]~[#6X3,#7X2:3]~[#6X3,#7X2:4]~[#6X3,#7X2:5]~1",  # Bonded to metal ortho pos
-            "[#8X2,#16X2:1]1~[#6X3,#7X2:2]~[#6X3,#7X3:3]~[#6X3,#7X2:4]~[#6X3,#7X2:5]~1",  # Bonded to metal meta pos
-            "[#6X3,#7X2,#8X2,#16X2,#17X2:1]1~[#6X3,#7X2,#8X2,#16X2,#17X2:2]~[#6X3,#7X2,#8X2,#16X2,#17X2:3]~[#6X3,#7X2,#8X2,#16X2,#17X2:4]~[#6X3,#7X2,#8X2,#16X2,#17X2:5]~[#6X3,#7X2,#8X2,#16X2,#17X2:6]~1",  # Not bonded to metal
-            "[#6X3,#7X3,#8X3,#16X3,#17X3:1]1~[#6X3,#7X2,#8X2,#16X2,#17X2:2]~[#6X3,#7X2,#8X2,#16X2,#17X2:3]~[#6X3,#7X2,#8X2,#16X2,#17X2:4]~[#6X3,#7X2,#8X2,#16X2,#17X2:5]~[#6X3,#7X2,#8X2,#16X2,#17X2:6]~1",  # Bonded to metal
+            "[#6D3,#7D3:1]1~[#6D3,#7D2:2]~[#6D3,#7D2:3]~[#6D3,#7D2:4]~[#6D3,#7D2:5]~1",  # Not bonded to metal
+            "[#6D3,#7D3:1]1~[#6D3,#7D3:2]~[#6D3,#7D2:3]~[#6D3,#7D2:4]~[#6D3,#7D2:5]~1",  # Bonded to metal ortho pos
+            "[#6D3,#7D3:1]1~[#6D3,#7D2:2]~[#6D3,#7D3:3]~[#6D3,#7D2:4]~[#6D3,#7D2:5]~1",  # Bonded to metal meta pos
+            "[#8D2,#16D2:1]1~[#6D3,#7D2:2]~[#6D3,#7D2:3]~[#6D3,#7D2:4]~[#6D3,#7D2:5]~1",  # Not bonded to metal
+            "[#8D3,#16D3:1]1~[#6D3,#7D2:2]~[#6D3,#7D2:3]~[#6D3,#7D2:4]~[#6D3,#7D2:5]~1",  # Bonded to chalgogen
+            "[#8D2,#16D2:1]1~[#6D3,#7D3:2]~[#6D3,#7D2:3]~[#6D3,#7D2:4]~[#6D3,#7D2:5]~1",  # Bonded to metal ortho pos
+            "[#8D2,#16D2:1]1~[#6D3,#7D2:2]~[#6D3,#7D3:3]~[#6D3,#7D2:4]~[#6D3,#7D2:5]~1",  # Bonded to metal meta pos
+            "[#6D3,#7D2,#8D2,#16D2,#17D2:1]1~[#6D3,#7D2,#8D2,#16D2,#17D2:2]~[#6D3,#7D2,#8D2,#16D2,#17D2:3]~[#6D3,#7D2,#8D2,#16D2,#17D2:4]~[#6D3,#7D2,#8D2,#16D2,#17D2:5]~[#6D3,#7D2,#8D2,#16D2,#17D2:6]~1",  # Not bonded to metal
+            "[#6D3,#7D3,#8D3,#16D3,#17D3:1]1~[#6D3,#7D2,#8D2,#16D2,#17D2:2]~[#6D3,#7D2,#8D2,#16D2,#17D2:3]~[#6D3,#7D2,#8D2,#16D2,#17D2:4]~[#6D3,#7D2,#8D2,#16D2,#17D2:5]~[#6D3,#7D2,#8D2,#16D2,#17D2:6]~1",  # Bonded to metal
         ],
         tetrahedral_SMARTS: list[str] = [
             "[SX3,SeX3]",
