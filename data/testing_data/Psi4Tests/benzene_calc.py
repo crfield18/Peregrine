@@ -54,8 +54,8 @@ nocom
 
 # Define basis sets
 element_basis_map = {
-    'C': 'def2-tzvppd',
     'H': 'def2-tzvppd',
+    'C': 'def2-tzvppd',
 }
 combined_basis = '\n'.join(
     bse.get_basis(basisname, elements=[symbol], fmt='psi4', header=False)
@@ -69,8 +69,8 @@ spherical
 ''', name='mybasis', key='BASIS')
 metadata['Basis Set'] = element_basis_map
 jkfit_basis_map = {
-    'C': 'def2-universal-jkfit',
     'H': 'def2-universal-jkfit',
+    'C': 'def2-universal-jkfit',
 }
 combined_jkfit = '\n'.join(
     bse.get_basis(basisname, elements=[symbol], fmt='psi4', header=False)
@@ -130,6 +130,8 @@ except psi4.OptimizationConvergenceError as exc:
     with open('Benzene.meta.json', 'w') as f:
         json.dump(metadata, f, indent=2)
     exit()
+except Exception as e:
+    metadata['Error Code'] = str(e)
     
 # Save properties
 coords_bohr = np.array(wfn.molecule().geometry())

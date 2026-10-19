@@ -42,10 +42,6 @@ from xyzgraph import build_graph
 
 import networkx as nx
 
-from openmm.app import PDBFile
-from pdbfixer import PDBFixer
-from openff.toolkit import Molecule as openffMolObj
-
 import pyddx
 
 from .atom import Atom
@@ -4300,26 +4296,6 @@ crest {self.Identifier}.toml > {self.Identifier}.out"""
         ASEMolecule.info["spin"] = int(self.Multiplicity)               # read by MACE-POLAR and UMA
         ASEMolecule.info["spin_multiplicity"] = int(self.Multiplicity)  # keep for existing code
         return ASEMolecule
-
-    def MoleculeToOpenMMMol(self) -> PDBFile:
-        rdkitMolObj = self.MoleculeToRDKitMol(SuppressRDKitWarnings=False)
-        pdb_block = Chem.MolToPDBBlock(rdkitMolObj)
-        with open(Path(__file__).parent / f"{self.Identifier}.pdb", "w") as f:
-            f.write(pdb_block)
-            f.close()
-        fixer = PDBFixer(f"{str(Path(__file__).parent)}/{self.Identifier}.pdb")
-        PDBFile.writeFile(
-            fixer.topology,
-            fixer.positions,
-            open(Path(__file__).parent / f"{self.Identifier}.pdb", "w"),
-        )
-        openmmMolObj = PDBFile(f"{str(Path(__file__).parent)}/{self.Identifier}.pdb")
-        # os.remove(Path(__file__).parent / f"{self.Identifier}.pdb")
-        return openmmMolObj
-
-    def MoleculeToOpenFFMol(self) -> openffMolObj:
-        rdkitMolObj = self.MoleculeToRDKitMol(SuppressRDKitWarnings=False)
-        return openffMolObj.from_rdkit(rdkitMolObj, allow_undefined_stereo=True)
 
     # === Read molecule files ===
 
