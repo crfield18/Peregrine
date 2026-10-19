@@ -3,8 +3,21 @@ start = time.time()
 
 conv_params = {'convergence_energy': 1e-06, 'convergence_grms': 3e-05, 'convergence_gmax': 4.5e-05, 'convergence_drms': 0.00012, 'convergence_dmax': 0.00018}
 
-import json
 import resource
+import platform
+
+def get_max_rss_mb():
+    raw = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    if platform.system() == 'Darwin':
+        return raw / (1024 * 1024)
+    return raw / 1024
+
+import os
+os.environ['OMP_NUM_THREADS'] = '4'
+os.environ['OPENBLAS_NUM_THREADS'] = '4'
+os.environ['MKL_NUM_THREADS'] = '4'
+
+import json
 import basis_set_exchange as bse
 import pyscf.gto.basis.bse as pbse
 from pyscf import gto
@@ -16,7 +29,7 @@ lib.num_threads(4)
 metadata = {}
 
 # Retrieve basis set from basis set exchange
-raw = bse.api.get_basis('def2svp', elements=['C', 'H', 'Cl', 'Co', 'P'])
+raw = bse.api.get_basis('def2svp', elements=['H', 'Cl', 'C', 'P', 'Co'])
 orbital_basis, _ = pbse._orbital_basis(raw)
         
 # Define Molecule
@@ -93,10 +106,10 @@ H -1.6277 -2.9123 -0.5788
 H -5.5845 -2.6152 7.3426
 H -7.0025 3.9105 1.6703
 ''',
-    basis={'C': orbital_basis['C'], 'H': orbital_basis['H'], 'Cl': orbital_basis['Cl'], 'Co': orbital_basis['Co'], 'P': orbital_basis['P'], },
+    basis={'H': orbital_basis['H'], 'Cl': orbital_basis['Cl'], 'C': orbital_basis['C'], 'P': orbital_basis['P'], 'Co': orbital_basis['Co'], },
     ecp={},
     unit = 'Ang',
-    output = 'BIHGEE-S4_PySCFOutput.log',
+    output = 'BIHGEE-S4.log',
     verbose = 4,
     max_memory = 1000,
     charge = 0,
@@ -137,10 +150,11 @@ metadata['Beta Fock Matrix File Name'] = 'BIHGEE-S4_PySCFOutput.beta.fock'
 np.savetxt('BIHGEE-S4_PySCFOutput.alpha.fock', F[0], fmt='%.16e')
 np.savetxt('BIHGEE-S4_PySCFOutput.beta.fock', F[1], fmt='%.16e')
 
+
 end = time.time()
 time_taken = round(end - start, 2)
 metadata['Time Taken (s)'] = time_taken
-metadata['Maximum RAM used (MB)'] = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024)
+metadata['Maximum RAM used (MB)'] = int(get_max_rss_mb())
 # Write metadata to .json file
-with open('BIHGEE-S4_PySCFOutput.meta.json', 'w') as f:
+with open('BIHGEE-S4.meta.json', 'w') as f:
    json.dump(metadata, f, indent=2)
