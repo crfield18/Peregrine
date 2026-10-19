@@ -6,7 +6,7 @@ Source Code: github.com/mace12345/Peregrine
 
 ## Purpose
 
-This license allows you to use and share this software for noncommercial purposes for free and to try this software for commercial purposes for thirty days.
+This license allows you to use and share this software for non-commercial purposes for free and to try this software for commercial purposes for thirty days.
 
 ## Agreement
 
@@ -28,11 +28,11 @@ Developing feedback, changes, or additions that you contribute back to the contr
 
 Personal use for research, experiment, and testing for the benefit of public knowledge, personal study, private entertainment, hobby projects, amateur pursuits, or religious observance, without any anticipated commercial application, doesn't count as use for a commercial purpose.
 
-## Noncommercial Organizations
+## Non-commercial Organizations
 
 Use by any charitable organization, educational institution, public research organization, public safety or health organization, environmental protection organization, or government institution doesn't count as use for a commercial purpose regardless of the source of funding or obligations resulting from the funding.
 
-## Defense
+## Defence
 
 Don't make any legal claim against anyone accusing this software, with or without changes, alone or with other technology, of infringing any patent.
 
