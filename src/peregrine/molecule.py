@@ -3326,7 +3326,7 @@ class Molecule:
             if atomObj.Gradient is not None:
                 mol_str += f" XGD={atomObj.Gradient[0]} YGD={atomObj.Gradient[1]} ZGD={atomObj.Gradient[2]}"
             if atomObj.SOAPDescriptor is not None:
-                mol_str += f" SPD={str(atomObj.SOAPDescriptor).replace(" ", "")}"
+                mol_str += f" SPD={str(atomObj.SOAPDescriptor).replace(' ', '')}"
             if atomObj.MullikenCharge is not None:
                 mol_str += f" MKC={atomObj.MullikenCharge}"
             if atomObj.LowdinCharge is not None:
@@ -6434,7 +6434,7 @@ $end"""
             with open(workdir / "xtbopt.log", "r") as f:
                 xtb_log_str = f.read()
                 f.close()
-            xtb_log_str = f"{self.NumberOfAtoms}\n{xtb_log_str.split(" energy:")[-1]}"
+            xtb_log_str = f"{self.NumberOfAtoms}\n{xtb_log_str.split(' energy:')[-1]}"
             self.error_code = "xtb did not optimise"
             self.ReadXYZStringMapCoords(xtb_log_str)
         else:
