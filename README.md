@@ -2,7 +2,7 @@
 
 __Project is under construction__
 
-Software for building transition states in a high-throuput fashion. Input TS geometry and SMILES => Output TS structures. Enables reactivity screening and building datasets for MLPs and AI/ML applications.
+Software for building transition states in a high-throughput fashion. Input TS geometry and SMILES => Output TS structures. Enables reactivity screening and building datasets for MLPs and AI/ML applications.
 
 # The big idea proposition in 30 seconds
 
@@ -16,7 +16,7 @@ However, experimental chemists typically lack the programming and computational 
 
 Python Version 3.12 and all packages are downloaded within the conda environment that must be called "chem-env". All packages are managed with __Miniforge__, works well across different platforms and has BSD 3-clause license, handy for commercial use.
 
-## Installing Dependancies for chem-env, the python environment for Peregrine
+## Installing Dependencies for chem-env, the python environment for Peregrine
 ```
 conda env create -f environment.yml --name chem-env -y
 ```
@@ -53,10 +53,10 @@ __PySCF__ can run all sorts of quantum chemical calculations and is highly custo
 __tblite__ can run xtb calculations very quickly with the added benefit of retrieving the matrices used to perform the calculations.
 
 ## Python Classics
-__Numpy__, __Pandas__, and __Matplotlib__ are the holy trinity of basic scientific python programming. Numpy and pandas are by far the most useful, matplotlib is occasionally used to visualise results and trying to understand certain problems better but it is not integral for the project at all. But I like to have it installed just in case.
+__Numpy__, __Pandas__, and __Matplotlib__ are the holy trinity of basic scientific python programming. NumPy and pandas are by far the most useful, matplotlib is occasionally used to visualise results and trying to understand certain problems better but it is not integral for the project at all. But I like to have it installed just in case.
 
 ## Add ons that may or may not be useful in the final product
 __Scipy__ and __scikit-learn__
 
 ## GUI Related Dependencies
-__PyVista__ an excellent toolkit for 3D modelling of out molecules. __PyQt5__ Don't quite know how to install the exact version but it should not matter to much. __VTK__ (Visulisation Tool Kit).
+__PyVista__ an excellent toolkit for 3D modelling of out molecules. __PyQt5__ Don't quite know how to install the exact version but it should not matter to much. __VTK__ (Visualisation Tool Kit).
