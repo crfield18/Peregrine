@@ -16,7 +16,7 @@ def test_ReadXYZFile_BH9():
 
     # Radical Rearrangment
     molObj = Molecule.ReadXYZFile(
-        xyz_file=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/TS/BH9/01_3R.xyz",
+        xyz_string=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/TS/BH9/01_3R.xyz",
         identifier="RadPentene",
         charge=0,
         multiplicity=2,
@@ -33,7 +33,7 @@ def test_ReadXYZFile_BH9():
         f.write(molObj.WriteMolString())
         f.close()
     molObj = Molecule.ReadXYZFile(
-        xyz_file=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/TS/BH9/01_3TS.xyz",
+        xyz_string=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/TS/BH9/01_3TS.xyz",
         identifier="RadPentene",
         charge=0,
         multiplicity=2,
@@ -50,7 +50,7 @@ def test_ReadXYZFile_BH9():
         f.write(molObj.WriteMolString())
         f.close()
     molObj = Molecule.ReadXYZFile(
-        xyz_file=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/TS/BH9/01_3P.xyz",
+        xyz_string=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/TS/BH9/01_3P.xyz",
         identifier="RadPentene",
         charge=0,
         multiplicity=2,
@@ -69,7 +69,7 @@ def test_ReadXYZFile_BH9():
 
     # Radical Addition
     molObj = Molecule.ReadXYZFile(
-        xyz_file=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/TS/BH9/01_9P.xyz",
+        xyz_string=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/TS/BH9/01_9P.xyz",
         identifier="RadThiol",
         charge=0,
         multiplicity=2,
@@ -95,7 +95,7 @@ def test_ReadXYZFile_BH9():
         f.write(molObj.WriteMolString())
         f.close()
     molObj = Molecule.ReadXYZFile(
-        xyz_file=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/TS/BH9/01_9TS.xyz",
+        xyz_string=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/TS/BH9/01_9TS.xyz",
         identifier="RadThiol",
         charge=0,
         multiplicity=2,
@@ -126,7 +126,7 @@ def test_ReadXYZFile_BH9():
 
     # Pericyclic [3+2]
     molObj = Molecule.ReadXYZFile(
-        xyz_file=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/TS/BH9/02_56P.xyz",
+        xyz_string=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/TS/BH9/02_56P.xyz",
         identifier="Peri32",
         charge=0,
         multiplicity=1,
@@ -143,7 +143,7 @@ def test_ReadXYZFile_BH9():
         f.write(molObj.WriteMolString())
         f.close()
     molObj = Molecule.ReadXYZFile(
-        xyz_file=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/TS/BH9/02_56TS.xyz",
+        xyz_string=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/TS/BH9/02_56TS.xyz",
         identifier="Peri32",
         charge=0,
         multiplicity=1,
@@ -176,7 +176,7 @@ def test_ReadXYZFile_BH9():
 
     # Halogen Abstraction
     molObj = Molecule.ReadXYZFile(
-        xyz_file=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/TS/BH9/03_7TS.xyz",
+        xyz_string=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/TS/BH9/03_7TS.xyz",
         identifier="HalAbstract",
         charge=0,
         multiplicity=2,
@@ -231,7 +231,7 @@ def test_ReadXYZFile_BH9():
 
     # Hydrogen Abstraction
     molObj = Molecule.ReadXYZFile(
-        xyz_file=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/TS/BH9/04_1TS.xyz",
+        xyz_string=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/TS/BH9/04_1TS.xyz",
         identifier="HydrogenAbstract",
         charge=0,
         multiplicity=2,
@@ -254,7 +254,7 @@ def test_ReadXYZFile_BH9():
         f.write(molObj.WriteMolString())
         f.close()
     molObj = Molecule.ReadXYZFile(
-        xyz_file=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/TS/BH9/04_1P.xyz",
+        xyz_string=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/TS/BH9/04_1P.xyz",
         identifier="HalAbstract",
         charge=0,
         multiplicity=2,
@@ -269,7 +269,7 @@ def test_ReadXYZFile_BH9():
         f.write(molObj.WriteMolString())
         f.close()
     molObj = Molecule.ReadXYZFile(
-        xyz_file=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/TS/BH9/04_1R.xyz",
+        xyz_string=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/TS/BH9/04_1R.xyz",
         identifier="HydrogenAbstract",
         charge=0,
         multiplicity=2,
@@ -290,7 +290,7 @@ def test_ReadXYZFile_BH9():
 
     # Hydride Abstraction
     molObj = Molecule.ReadXYZFile(
-        xyz_file=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/TS/BH9/05_5TS.xyz",
+        xyz_string=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/TS/BH9/05_5TS.xyz",
         identifier="HydrideAbstract",
         charge=1,
         multiplicity=1,
@@ -358,7 +358,7 @@ def test_ReadXYZFile_BH9():
 
     # Boron Transfer 14
     molObj = Molecule.ReadXYZFile(
-        xyz_file=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/TS/BH9/06_14TS.xyz",
+        xyz_string=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/TS/BH9/06_14TS.xyz",
         identifier="BoronTransfer",
         charge=0,
         multiplicity=1,
@@ -408,7 +408,7 @@ def test_ReadXYZFile_BH9():
 
     # Sn2 6
     molObj = Molecule.ReadXYZFile(
-        xyz_file=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/TS/BH9/08_1TS.xyz",
+        xyz_string=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/TS/BH9/08_1TS.xyz",
         identifier="BoronTransfer",
         charge=-1,
         multiplicity=1,
@@ -747,7 +747,7 @@ def test_ReadXYZFiles_MOBH():
     # Carbanion coordinated to Scandium
     # Therefore multiplicity of 2 due to d1 config
     molObj = Molecule.ReadXYZFile(
-        xyz_file=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/TS/MOBH35/MOBH35_1.xyz",
+        xyz_string=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/TS/MOBH35/MOBH35_1.xyz",
         identifier="MOBH35_1",
         charge=1,
         multiplicity=2,

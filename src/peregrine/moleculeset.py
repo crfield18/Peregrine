@@ -284,8 +284,18 @@ class MoleculeSet:
     def ReadXYZFileDirectory(self):
         pass
 
-    def WriteXYZFileDirectory(self):
-        pass
+    def WriteXYZFileDirectory(self, xyz_file_directory: str):
+        os.makedirs(xyz_file_directory, exist_ok=True)
+
+        def write(item):
+            identifier, molObj = item
+            with open(f"{xyz_file_directory}/{identifier}.xyz", "w") as f:
+                f.write(molObj.WriteXYZString())
+
+        workers = max(1, (os.cpu_count() or 2) // 2)
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            # list() forces iteration, so exceptions propagate instead of being swallowed
+            list(executor.map(write, self.MoleculesDict.items()))
 
     @classmethod
     def ReadMolFileDirectory(
@@ -430,7 +440,7 @@ class MoleculeSet:
         group_name: str = "Molecules",
         convert_coords_units: str = "Bohr_to_Ang",
         convert_grad_units: str = "Eh/Bohr_to_Eh/Ang",
-    ) -> "MoleculeSet":
+    ) -> "MoleculeSet | None":
         """
         Reads a HDF5 file containing serialized Molecule objects and returns a MoleculeSet.
 
@@ -444,13 +454,27 @@ class MoleculeSet:
         """
         from .atom import ATOMIC_NUMBERS_TO_SYMBOLS
         with h5py.File(hdf5_file_path) as hdf5_file:
-            group = hdf5_file[group_name]
-            atomic_numbers = group["atomic_numbers"][()].astype(int)
-            conformations = group["conformations"][()]
-            elec_ens = group["dft_total_energy"][()]
-            gradients = group["dft_total_gradient"][()]
-            mayer_BOs = group["mayer_indices"][()]
-            chargess = group["mbis_charges"][()]
+            try:
+                group = hdf5_file[group_name]
+                atomic_numbers = group["atomic_numbers"][()].astype(int)
+                conformations = group["conformations"][()]
+                elec_ens = group["dft_total_energy"][()]
+                gradients = group["dft_total_gradient"][()]
+                mayer_BOs = group["mayer_indices"][()]
+                chargess = group["mbis_charges"][()]
+            except KeyError:
+                print(f"Group '{group_name}' not found. File structure:\n")
+
+                def _show(name, obj):
+                    indent = "  " * name.count("/")
+                    leaf = name.rsplit("/", 1)[-1]
+                    if isinstance(obj, h5py.Group):
+                        print(f"{indent}{leaf}/")
+                    else:
+                        print(f"{indent}{leaf:30s} shape={obj.shape} dtype={obj.dtype}")
+
+                hdf5_file.visititems(_show)
+                return None
         # Conversion for before making Molecule Objects
         atomic_symbols = [ATOMIC_NUMBERS_TO_SYMBOLS[atomic_number] for atomic_number in atomic_numbers]
         if convert_coords_units == "Bohr_to_Ang":
@@ -486,7 +510,6 @@ class MoleculeSet:
             instance.MoleculesDict[molObj.Identifier] = molObj
         return instance
         
-
     def ReadORCA6OutputDirectory(
         self,
         input_file_path: str,
@@ -1520,3 +1543,23 @@ class MoleculeSet:
         )
         RMSD_df.set_index("Identifier", inplace=True)
         return RMSD_df
+
+    def AssignBonds(self):
+        self.WriteXYZFileDirectory(
+            f"{str(Path(__file__).parent)}/temp_XYZ_files"
+        )
+        for molObj in self.MoleculesDict.values():
+            identifier = molObj.Identifier
+            formal_charge = molObj.FormalCharge
+            multiplicity = molObj.Multiplicity
+            with open(Path(__file__).parent / "temp_XYZ_files" / f"{identifier}.xyz", "r") as f:
+                xyz_string = f.read()
+                f.close()
+            new_molObj = Molecule.ReadXYZFile(
+                xyz_string=f"{str(Path(__file__).parent)}/temp_XYZ_files/{identifier}.xyz",
+                identifier=identifier,
+                charge=formal_charge,
+                multiplicity=multiplicity,
+            )
+            self.MoleculesDict[identifier] = new_molObj
+

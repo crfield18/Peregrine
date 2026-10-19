@@ -52,6 +52,7 @@ from .atom import Atom
 from .atom import ATOMIC_NUMBER_OF_PRIMITIVES
 from .atom import EXCLUDE_NON_METAL_SMARTS_PATTERN
 from .atom import NON_METAL_EXCLUDE_H_SMARTS_PATTERN
+from .atom import BOOL_METAL
 
 # === Important Conversions ===
 
@@ -4096,21 +4097,41 @@ python {self.Identifier}.py"""
             sche_str = None
         return (psi4_str, sche_str)
 
+    def WriteConstraintsStringForCREST(self):
+        example = """$constrain
+  force constant=0.05 # Eh/Bohr^2
+  distance: 2, 12, 1.85
+  distance: 2, 4, auto
+$end"""
+
     def WriteTOMLStringForCREST(
         self,
         CPU_count: int = 4,
         method: str = "gfn2",
         runtype: str = "imtd-gc",
+        energy_window: float = 6,
+        rmsd_threshold: float = 0.125,
+        no_reference_topo: bool = True,
+        constraints_file: bool = False,
     ) -> str:
         toml_str = f"""# CREST 3 input file
 input='{self.Identifier}.xyz'
 runtype='{runtype}'
 threads={CPU_count}
+topo={str(no_reference_topo).lower()}
+"""
+        if constraints_file == True:
+            toml_str += "constraints='constraints.inp'"
+        toml_str += f"""
 
 [[calculation.level]]
 method='{method}'
 chrg={self.GetFormalCharge()}
 uhf={self.GetMultiplicity()-1}
+
+[cregen]
+ewin={energy_window}
+rthr={rmsd_threshold}
 """
         return toml_str
 
@@ -4668,10 +4689,10 @@ crest {self.Identifier}.toml > {self.Identifier}.out"""
 
     @classmethod
     def ReadXYZFile(
-        cls, xyz_file: str, identifier: str, charge: int, multiplicity: int
+        cls, xyz_string: str, identifier: str, charge: int, multiplicity: int, guess_atom_multiplicities: bool = False
     ) -> "Molecule":
         G_full = build_graph(
-            atoms=xyz_file,
+            atoms=xyz_string,
             charge=charge,
             multiplicity=multiplicity,
         )
@@ -4698,18 +4719,21 @@ crest {self.Identifier}.toml > {self.Identifier}.out"""
             AtomsList=AtomsList,
             BondOrderMatrix=BondOrderMatrix,
         )
-        if molObj.Multiplicity != multiplicity:
-            for atomObj in molObj.AtomsList:
-                atom_valence_electron_count = (
-                    atomObj.Valence
-                    + atomObj.AtomicValenceElectronCount
-                    + (-1 * atomObj.FormalCharge)
-                )
-                if atom_valence_electron_count % 2 == 1:
-                    atomObj.Multiplicity = 2
-            molObj.GetMultiplicity()
+        if guess_atom_multiplicities == True:
             if molObj.Multiplicity != multiplicity:
-                print("Need to improve this multiplicity assigning function")
+                for atomObj in molObj.AtomsList:
+                    atom_valence_electron_count = (
+                        atomObj.Valence
+                        + atomObj.AtomicValenceElectronCount
+                        + (-1 * atomObj.FormalCharge)
+                    )
+                    if atom_valence_electron_count % 2 == 1:
+                        atomObj.Multiplicity = 2
+                molObj.GetMultiplicity()
+                if molObj.Multiplicity != multiplicity:
+                    print("Need to improve this multiplicity assigning function")
+        else:
+            molObj.AtomsList[0].Multiplicity = multiplicity
         return molObj
 
     @classmethod
@@ -4770,6 +4794,24 @@ crest {self.Identifier}.toml > {self.Identifier}.out"""
             return None
         if RDKitMolObj is None:
             raise ValueError(f"RDKit failed to parse SMILES: {SMARTS}")
+
+        RDKitMolObj = Chem.RWMol(RDKitMolObj)          # editable copy
+        # Convert metal ligand single bonds to dative bonds
+        for bond in list(RDKitMolObj.GetBonds()):
+            if bond.GetBondType() == Chem.BondType.DATIVE:
+                continue
+            atom1, atom2 = bond.GetBeginAtom(), bond.GetEndAtom()
+            is_metal_1 = BOOL_METAL.get(atom1.GetSymbol(), False)
+            is_metal_2 = BOOL_METAL.get(atom2.GetSymbol(), False)
+            if is_metal_1 == is_metal_2:        # both metals or both non-metals: skip
+                continue
+            # Begin atom must be the donor (ligand), end atom the acceptor (metal)
+            if is_metal_1:
+                donor_idx, metal_idx = atom2.GetIdx(), atom1.GetIdx()
+            else:
+                donor_idx, metal_idx = atom1.GetIdx(), atom2.GetIdx()
+            RDKitMolObj.RemoveBond(donor_idx, metal_idx)
+            RDKitMolObj.AddBond(donor_idx, metal_idx, Chem.BondType.DATIVE)
         
         if AddHydrogens == True:
             RDKitMolObj.UpdatePropertyCache(strict=False)
