@@ -31,6 +31,16 @@ conda activate chem-env
 pip install -e .
 ``` 
 
+## Install the latest g-xTB release
+Download the latest release from the [Grimme Lab GitHub](https://github.com/grimme-lab/g-xtb). The files in the g-xTB release may flag the MacOS quarantine check. If this happens run:
+
+```
+cd /path/to/xtb-bleed-*/
+xattr -dr com.apple.quarantine .
+chmod +x bin/*
+./bin/xtb --version
+```
+
 ## Test to make sure Peregrine is correctly installed and working
 ```
 pytest -v -s

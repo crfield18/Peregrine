@@ -32,6 +32,7 @@ dependencies:
   - umap-learn
   - geometric
   - ninja
+  - h5py
   - pip:
     - xyzgraph
     - black
