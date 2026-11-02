@@ -6175,18 +6175,19 @@ crest {self.Identifier}.toml --T {CPU_count} > {self.Identifier}.out"""
         self.DeriveBasicAttributes()
 
     def RattleAtomCoordinates(self, sigma: float, rng: np.random.Generator | None = None,
-                            seed: int | None = None) -> np.ndarray:
+                            seed: int | None = None):
         if rng is None:
             rng = np.random.default_rng(seed)
-        n = len(self.coords)                                   # (N, 3) array
         # Uniform random direction per atom
         directions = rng.normal(size=(self.NumberOfAtoms, 3))
         directions /= np.linalg.norm(directions, axis=1, keepdims=True)
         # Half-normal distance per atom
         distances = np.abs(rng.normal(0.0, sigma, size=self.NumberOfAtoms))
-        displacement = directions * distances[:, None]
-        self.coords = self.coords + displacement
-        return displacement
+        displacements = directions * distances[:, None]
+        for atomObj, displacement in zip(
+            self.AtomsList, displacements
+        ):
+            atomObj.Coordinates += displacement
 
     # === Translate and Rotate Molecule, and Geometry Functions ===
 

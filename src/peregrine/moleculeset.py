@@ -689,7 +689,7 @@ class MoleculeSet:
 
     # === Write molecule information into directories ===
 
-    def WriteMolFileDirectory(self, mol_file_directory: str):
+    def WriteMolFileDirectory(self, mol_file_directory: str, zipped: bool = False):
         os.makedirs(mol_file_directory, exist_ok=True)
 
         def write(item):
@@ -701,6 +701,14 @@ class MoleculeSet:
         with ThreadPoolExecutor(max_workers=workers) as executor:
             # list() forces iteration, so exceptions propagate instead of being swallowed
             list(executor.map(write, self.MoleculesDict.items()))
+
+        if zipped == True:
+            shutil.make_archive(
+                mol_file_directory,
+                "zip",
+                mol_file_directory,
+            )
+            shutil.rmtree(mol_file_directory)
 
     def WritePySCFInput(
         self,
@@ -1732,3 +1740,15 @@ class MoleculeSet:
             molObj = molecules_list[idx]
             kmedoids_molObj_set.MoleculesDict[molObj.Identifier] = molObj
         return kmedoids_molObj_set
+
+    def RattleAtomCoordinates(
+        self,
+        sigma: float,
+        rng: np.random.Generator | None = None,
+        seed: int | None = None
+    ):
+        for molObj in self.MoleculesDict.values():
+            molObj.RattleAtomCoordinates(
+                sigma=sigma, rng=rng, seed=seed
+            )
+    
