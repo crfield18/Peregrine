@@ -2547,6 +2547,7 @@ class Molecule:
             atomObj.Gradient = None
             atomObj.pKa = None
             atomObj.pKb = None
+            atomObj.SOAPDescriptor = None
 
     def DeriveMoleculeSMILES(self):
         # Split substructuures into their own molecule objects

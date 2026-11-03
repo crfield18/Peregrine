@@ -928,6 +928,7 @@ class MoleculeSet:
                 for atomic_symbol in atomic_symbols:
                     new_local_basissets[atomic_symbol] = local_basisset
 
+        OG_restricted = restricted
         for molObj in molObj_list:
 
             # Sort local basissets
@@ -951,7 +952,8 @@ class MoleculeSet:
                     num_basisset_funcs = molObj.GetNumberOfBasisSetFunctions(
                         local_basissets
                     )
-
+            if restricted == True and molObj.Multiplicity > 1:
+                restricted = False
             psi4_inp, queue_sh = molObj.WritePsi4Input(
                 method=method,
                 basisset=basisset,
@@ -978,6 +980,8 @@ class MoleculeSet:
                 psi4_command=psi4_command,
                 scratch_dir=scratch_dir,
             )
+            if OG_restricted != restricted:
+                restricted = OG_restricted
 
             with open(f"{psi4_file_directory}/{molObj.Identifier}.py", "w") as f:
                 f.write(psi4_inp)
@@ -1762,3 +1766,10 @@ class MoleculeSet:
             )
         if filter_failed_calc_soap_des == True:
             self.RemoveMolecule(molObjs_to_remove)
+
+    def BatchMolecules(
+        self,
+        molecule_directory: str,
+        molecule_projection: pd.DataFrame,
+    ):
+        pass
