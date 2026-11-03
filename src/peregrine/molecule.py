@@ -1,4 +1,4 @@
-# fmt: on
+# fmt: off
 from typing import Self
 from copy import deepcopy
 from pathlib import Path
@@ -210,15 +210,17 @@ def _GeneralHelper_IsPureNumber(string: str) -> bool:
 def _GeneralHelper_FindCondaEnvPython(env_name: str) -> str:
     """Return the path to the Python executable of a named conda environment."""
     candidates = []
-    if conda_exe := os.environ.get("CONDA_EXE"):          # .../miniforge3/bin/conda
+    if conda_exe := os.environ.get("CONDA_EXE"):  # .../miniforge3/bin/conda
         base = Path(conda_exe).resolve().parent.parent
         candidates.append(base / "envs" / env_name / "bin" / "python")
-    if prefix := os.environ.get("CONDA_PREFIX"):          # active env, e.g. .../envs/chem-env
+    if prefix := os.environ.get("CONDA_PREFIX"):  # active env, e.g. .../envs/chem-env
         p = Path(prefix)
         base = p.parent.parent if p.parent.name == "envs" else p
         candidates.append(base / "envs" / env_name / "bin" / "python")
     for base in ("~/miniforge3", "~/mambaforge", "~/miniconda3", "~/anaconda3"):
-        candidates.append(Path(base).expanduser() / "envs" / env_name / "bin" / "python")
+        candidates.append(
+            Path(base).expanduser() / "envs" / env_name / "bin" / "python"
+        )
 
     for c in candidates:
         if c.is_file() and os.access(c, os.X_OK):
@@ -1226,7 +1228,12 @@ def _PySCFHelper_ConstructMolObjFromTemplate(
             return molObj
         if len(pyscf_out_str.split("oom_kill event")) > 1:
             molObj.error_code = "Not enough RAM"
-        elif len(pyscf_out_str.split("Electron number %d and spin %d are not consistent")) > 1:
+        elif (
+            len(
+                pyscf_out_str.split("Electron number %d and spin %d are not consistent")
+            )
+            > 1
+        ):
             molObj.error_code = "Incorrect multiplicity/electron count"
         else:
             molObj.error_code = "Unknown Error"
@@ -1259,15 +1266,15 @@ def _PySCFHelper_ConstructMolObjFromTemplate(
     if "CPU cores used" in pyscf_json.keys():
         molObj.num_CPU_used = pyscf_json["CPU cores used"]
     if "Coordinates (A)" in pyscf_json.keys():
-        new_coordinates = (
-            np.array(pyscf_json["Coordinates (A)"])
-        )
+        new_coordinates = np.array(pyscf_json["Coordinates (A)"])
         if len(molObj.AtomsList) != len(new_coordinates):
-            raise ValueError(f"Different number of atoms between calculated molecule and old molecule")
+            raise ValueError(
+                f"Different number of atoms between calculated molecule and old molecule"
+            )
         for atomObj, new_coor in zip(molObj.AtomsList, new_coordinates):
             atomObj.Coordinates = new_coor
     return molObj
-    
+
 
 def _PySCFHelper_ConstructMolObjFromScratch():
     pass
@@ -2196,44 +2203,75 @@ hmass={hmass}
 def _MACEHelper_SetThreads(n: int = 1):
     """Call once, before anything imports torch."""
     n = n or os.cpu_count()
-    for v in ("OMP_NUM_THREADS", "MKL_NUM_THREADS",
-              "OPENBLAS_NUM_THREADS", "VECLIB_MAXIMUM_THREADS"):
+    for v in (
+        "OMP_NUM_THREADS",
+        "MKL_NUM_THREADS",
+        "OPENBLAS_NUM_THREADS",
+        "VECLIB_MAXIMUM_THREADS",
+    ):
         os.environ[v] = str(n)
     import torch
-    torch.set_num_threads(n)          # threads used within each operation
+
+    torch.set_num_threads(n)  # threads used within each operation
     try:
         torch.set_num_interop_threads(1)
     except RuntimeError:
-        pass                          # already set once PyTorch has started working
+        pass  # already set once PyTorch has started working
     return torch.get_num_threads()
 
 
 @lru_cache(maxsize=None)
-def _MACEHelper_GetMACECalc(model: str = "MACE-MP-0", model_size: str = "large", default_dtype: str = "float64", device: str = "cpu"):
+def _MACEHelper_GetMACECalc(
+    model: str = "MACE-MP-0",
+    model_size: str = "large",
+    default_dtype: str = "float64",
+    device: str = "cpu",
+):
     model_size = model_size.lower()
     if model == "MACE-MP-0":
         """Build a MACE-MP-0 calculator once per process and reuse it."""
-        warnings.filterwarnings("ignore", message=".*TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD.*")
-        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+        warnings.filterwarnings(
+            "ignore", message=".*TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD.*"
+        )
+        with (
+            contextlib.redirect_stdout(io.StringIO()),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
             from mace.calculators import mace_mp
+
             return mace_mp(model="large", default_dtype="float64", device=device)
     elif model == "MACE-POLAR":
         """Build a MACE-POLAR calculator once per process and reuse it."""
-        warnings.filterwarnings("ignore", message=".*TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD.*")
-        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+        warnings.filterwarnings(
+            "ignore", message=".*TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD.*"
+        )
+        with (
+            contextlib.redirect_stdout(io.StringIO()),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
             from mace.calculators import mace_polar
+
             if model_size == "large":
-                return mace_polar(model="polar-1-l", default_dtype=default_dtype, device=device)
+                return mace_polar(
+                    model="polar-1-l", default_dtype=default_dtype, device=device
+                )
             elif model_size == "medium":
-                return mace_polar(model="polar-1-m", default_dtype=default_dtype, device=device)
+                return mace_polar(
+                    model="polar-1-m", default_dtype=default_dtype, device=device
+                )
             elif model_size == "small":
-                return mace_polar(model="polar-1-s", default_dtype=default_dtype, device=device)
+                return mace_polar(
+                    model="polar-1-s", default_dtype=default_dtype, device=device
+                )
 
 
-def _MACEHelper_SinglePoint_MACE(key, molObj: "Molecule", solvent_correction: str | None = None):
+def _MACEHelper_SinglePoint_MACE(
+    key, molObj: "Molecule", solvent_correction: str | None = None
+):
     """Worker: run one MACE single point and return the updated object."""
     import torch
-    torch.set_num_threads(1)      # stop the workers competing for threads
+
+    torch.set_num_threads(1)  # stop the workers competing for threads
     torch.set_num_interop_threads(1)
     molObj.SinglePoint_MACE(solvent_correction=solvent_correction)
     return key, molObj
@@ -2242,28 +2280,36 @@ def _MACEHelper_SinglePoint_MACE(key, molObj: "Molecule", solvent_correction: st
 def _MACEHelper_OptimiseGeometry_MACE(key, molObj: "Molecule"):
     """Worker: run one MACE single point and return the updated object."""
     import torch
-    torch.set_num_threads(1)      # stop the workers competing for threads
+
+    torch.set_num_threads(1)  # stop the workers competing for threads
     torch.set_num_interop_threads(1)
     molObj.OptimiseGeometry_MACE()
     return key, molObj
 
 
-def _pKaCalcHelper_OptimiseGeometryAndSinglePoint_MACE(key, molObj: "Molecule", solvent_correction: str | None = None):
+def _pKaCalcHelper_OptimiseGeometryAndSinglePoint_MACE(
+    key, molObj: "Molecule", solvent_correction: str | None = None
+):
     """Worker: run one MACE single point and return the updated object."""
     import torch
-    torch.set_num_threads(1)      # stop the workers competing for threads
+
+    torch.set_num_threads(1)  # stop the workers competing for threads
     torch.set_num_interop_threads(1)
     molObj.OptimiseGeometry_xTB_bin()
-    molObj.OptimiseGeometry_MACE(model_size="small", default_dtype="float32", steps=1000)
-    molObj.OptimiseGeometry_MACE(model_size="large", default_dtype="float64", steps=1000)
+    molObj.OptimiseGeometry_MACE(
+        model_size="small", default_dtype="float32", steps=1000
+    )
+    molObj.OptimiseGeometry_MACE(
+        model_size="large", default_dtype="float64", steps=1000
+    )
     molObj.SinglePoint_MACE(solvent_correction=solvent_correction)
     return key, molObj
 
 
 def _ddXHelper_SolvationEnergy(
     molObj: "Molecule",
-    model: str = "pcm",              # "pcm", "cosmo" or "lpb"
-    solvent_epsilon: float = 78.3553, # water
+    model: str = "pcm",  # "pcm", "cosmo" or "lpb"
+    solvent_epsilon: float = 78.3553,  # water
     radii_scaling: float = 1.1,
     radii_set: str = "vdw",
     lmax: int = 8,
@@ -2275,19 +2321,31 @@ def _ddXHelper_SolvationEnergy(
     radii_set = radii_set
     if radii_set == "vdw":
         try:
-            radii_A = np.array([atomObj.AtomicRadii for atomObj in molObj.AtomsList]) * radii_scaling
+            radii_A = (
+                np.array([atomObj.AtomicRadii for atomObj in molObj.AtomsList])
+                * radii_scaling
+            )
         except KeyError as e:
-            raise KeyError(f"No vdW radius for element {e}; add it to _BONDI_RADII.") from None
-    centres = (np.asarray([atomObj.Coordinates for atomObj in molObj.AtomsList]) * (1/BohrRad_to_Angstrom)).T        # (3, N), Bohr
-    radii = radii_A * (1/BohrRad_to_Angstrom)                              # Bohr
-    dd_model = pyddx.Model(model, centres, radii, solvent_epsilon=solvent_epsilon, lmax=lmax)
-    solute_multipoles = np.asarray([atomObj.MullikenCharge for atomObj in molObj.AtomsList], dtype=float).reshape(1, -1) / np.sqrt(4 * np.pi)
+            raise KeyError(
+                f"No vdW radius for element {e}; add it to _BONDI_RADII."
+            ) from None
+    centres = (
+        np.asarray([atomObj.Coordinates for atomObj in molObj.AtomsList])
+        * (1 / BohrRad_to_Angstrom)
+    ).T  # (3, N), Bohr
+    radii = radii_A * (1 / BohrRad_to_Angstrom)  # Bohr
+    dd_model = pyddx.Model(
+        model, centres, radii, solvent_epsilon=solvent_epsilon, lmax=lmax
+    )
+    solute_multipoles = np.asarray(
+        [atomObj.MullikenCharge for atomObj in molObj.AtomsList], dtype=float
+    ).reshape(1, -1) / np.sqrt(4 * np.pi)
     solute_field = dd_model.multipole_electrostatics(solute_multipoles)
     solute_psi = dd_model.multipole_psi(solute_multipoles)
     state = pyddx.State(dd_model, solute_psi, solute_field["phi"])
     state.fill_guess()
     state.solve()
-    return 0.5 * np.sum(state.x * solute_psi)                        # Eh
+    return 0.5 * np.sum(state.x * solute_psi)  # Eh
 
 
 class Molecule:
@@ -2748,12 +2806,14 @@ class Molecule:
                         rings, e.g. the 6-ring in norbornane); requires max_ring_size
         """
         A = (np.asarray(self.ConnectivityMatrix) != 0).astype(int)
-        np.fill_diagonal(A, 0)                              # no self-loops
+        np.fill_diagonal(A, 0)  # no self-loops
         G = nx.from_numpy_array(A)
         if all_rings:
             if max_ring_size is None:
                 raise ValueError("all_rings=True needs max_ring_size")
-            rings = list(nx.simple_cycles(G, length_bound=max_ring_size))  # already ordered
+            rings = list(
+                nx.simple_cycles(G, length_bound=max_ring_size)
+            )  # already ordered
         else:
             rings = []
             for ring_nodes in nx.minimum_cycle_basis(G):
@@ -3054,19 +3114,27 @@ class Molecule:
             # r2 value = 0.899
             anionic_slope = -0.003364958747186327
             anionic_intercept = -0.4219389962049124
+
             # r2 value = 0.893
             def _anionic_pka_calc(
                 protonated_species: float,
                 deprotonated_species: float,
                 anionic_intercept: float = -0.4219389962049124,
-                anionic_slope: float = -0.003364958747186327
+                anionic_slope: float = -0.003364958747186327,
             ):
                 return round(
-                    (protonated_species - deprotonated_species - anionic_intercept) / anionic_slope, 1
+                    (protonated_species - deprotonated_species - anionic_intercept)
+                    / anionic_slope,
+                    1,
                 )
+
             self.OptimiseGeometry_xTB_bin()
-            self.OptimiseGeometry_MACE(model_size="small", default_dtype="float32", steps=1000)
-            self.OptimiseGeometry_MACE(model_size="large", default_dtype="float64", steps=1000)
+            self.OptimiseGeometry_MACE(
+                model_size="small", default_dtype="float32", steps=1000
+            )
+            self.OptimiseGeometry_MACE(
+                model_size="large", default_dtype="float64", steps=1000
+            )
             self.SinglePoint_MACE(solvent_correction="pcm(water)")
             # === Acidic Proton Calculations ===
             # Generate all the different tempMolObjs for calculation of acidic proton
@@ -3081,25 +3149,34 @@ class Molecule:
                     if n_atom.AtomicSymbol == "H" and n_atom.FormalCharge == 0:
                         temp_molObj.RemoveAtom(AtomObject=n_atom)
                         break
-                temp_molObj.Identifier = f"{temp_molObj.Identifier}_acidic{acidic_atom_idx}"
+                temp_molObj.Identifier = (
+                    f"{temp_molObj.Identifier}_acidic{acidic_atom_idx}"
+                )
                 temp_molObj_dict[acidic_atom_idx] = [formal_charge, temp_molObj]
-            # Parallel MACE optimise and single points on all deprotonated species 
+            # Parallel MACE optimise and single points on all deprotonated species
             n_tasks = len(temp_molObj_dict)
             if n_tasks > 0:
                 n_cpus = CPU_count
                 n_workers = min(n_tasks, n_cpus)
-                ctx = mp.get_context("spawn")   # fork + torch can deadlock
+                ctx = mp.get_context("spawn")  # fork + torch can deadlock
                 failed = {}
                 with ProcessPoolExecutor(max_workers=n_workers, mp_context=ctx) as ex:
                     futures = {
-                        ex.submit(_pKaCalcHelper_OptimiseGeometryAndSinglePoint_MACE, idx, mol, "pcm(water)"): idx
+                        ex.submit(
+                            _pKaCalcHelper_OptimiseGeometryAndSinglePoint_MACE,
+                            idx,
+                            mol,
+                            "pcm(water)",
+                        ): idx
                         for idx, (fc, mol) in temp_molObj_dict.items()
                     }
                     for fut in as_completed(futures):
                         idx = futures[fut]
                         try:
                             _, mol_done = fut.result()
-                            temp_molObj_dict[idx][1] = mol_done   # replace with the computed copy
+                            temp_molObj_dict[idx][
+                                1
+                            ] = mol_done  # replace with the computed copy
                         except Exception as e:
                             failed[idx] = repr(e)
                             print(f"MACE SP failed for acidic atom {idx}: {e}")
@@ -3116,7 +3193,7 @@ class Molecule:
                     )
             # TODO: === Amphorteric protons pKa/pKb calculations ===
             # TODO: === Basic proton pKb calculations ===
-        
+
         elif method == "SMARTS":
 
             # === Acidic Groups first ===
@@ -3124,11 +3201,16 @@ class Molecule:
                 if amp_idx not in acidic_atom_idxs:
                     acidic_atom_idxs.append(amp_idx)
             for acidic_atom_idx in acidic_atom_idxs:
-                temp_molObj = self.DefineSMARTSCentresAroundCentre(AtomIndex=acidic_atom_idx)
+                temp_molObj = self.DefineSMARTSCentresAroundCentre(
+                    AtomIndex=acidic_atom_idx
+                )
                 # Write Protonated Species
-                protonated_SMARTS = temp_molObj.WriteSMARTSString(HandleAromaticity=False)
+                protonated_SMARTS = temp_molObj.WriteSMARTSString(
+                    HandleAromaticity=False
+                )
                 protonated_molObj = Molecule.ReadSMARTSString(
-                    protonated_SMARTS, f"{temp_molObj.Identifier}-AtomIdx{acidic_atom_idx}"
+                    protonated_SMARTS,
+                    f"{temp_molObj.Identifier}-AtomIdx{acidic_atom_idx}",
                 )
                 if protonated_molObj is None:
                     continue
@@ -3139,10 +3221,13 @@ class Molecule:
                     if n_atom.AtomicSymbol == "H" and n_atom.FormalCharge == 0:
                         temp_molObj.RemoveAtom(AtomObject=n_atom)
                         break
-                deprotonated_SMARTS = temp_molObj.WriteSMARTSString(HandleAromaticity=False)
+                deprotonated_SMARTS = temp_molObj.WriteSMARTSString(
+                    HandleAromaticity=False
+                )
                 try:
                     deprotonated_molObj = Molecule.ReadSMARTSString(
-                        deprotonated_SMARTS, f"{temp_molObj.Identifier}-AtomIdx{acidic_atom_idx}"
+                        deprotonated_SMARTS,
+                        f"{temp_molObj.Identifier}-AtomIdx{acidic_atom_idx}",
                     )
                 except Exception as exc:
                     print(exc)
@@ -3152,18 +3237,25 @@ class Molecule:
                 deprotonated_inchi = deprotonated_molObj.WriteInchiString()
                 transformation_inchi = f"{protonated_inchi}>>{deprotonated_inchi}"
                 if transformation_inchi in pka_fragment_dict:
-                    self.AtomsList[acidic_atom_idx].pKa = pka_fragment_dict[transformation_inchi]
+                    self.AtomsList[acidic_atom_idx].pKa = pka_fragment_dict[
+                        transformation_inchi
+                    ]
 
             # === Takle Basic Groups next ===
             for amp_idx in amphoteric_atom_idxs:
                 if amp_idx not in basic_atom_idxs:
                     basic_atom_idxs.append(amp_idx)
             for basic_atom_idx in basic_atom_idxs:
-                temp_molObj = self.DefineSMARTSCentresAroundCentre(AtomIndex=basic_atom_idx)
+                temp_molObj = self.DefineSMARTSCentresAroundCentre(
+                    AtomIndex=basic_atom_idx
+                )
                 # Write Deprotonated Species First
-                deprotonated_SMARTS = temp_molObj.WriteSMARTSString(HandleAromaticity=False)
+                deprotonated_SMARTS = temp_molObj.WriteSMARTSString(
+                    HandleAromaticity=False
+                )
                 deprotonated_molObj = Molecule.ReadSMARTSString(
-                    deprotonated_SMARTS, f"{temp_molObj.Identifier}-AtomIdx{acidic_atom_idx}"
+                    deprotonated_SMARTS,
+                    f"{temp_molObj.Identifier}-AtomIdx{acidic_atom_idx}",
                 )
                 if deprotonated_molObj is None:
                     continue
@@ -3176,15 +3268,17 @@ class Molecule:
                     Label="H_added",
                     UpdateAtomLabels=False,
                 )
-                temp_molObj.AddBond(AtomLabels=[
-                    temp_molObj.AtomsList[basic_atom_idx].Label,
-                    "H_added"
-                ])
+                temp_molObj.AddBond(
+                    AtomLabels=[temp_molObj.AtomsList[basic_atom_idx].Label, "H_added"]
+                )
                 temp_molObj.AtomsDict["H_added"][1].SMARTSCentre = True
-                protonated_SMARTS = temp_molObj.WriteSMARTSString(HandleAromaticity=False)
+                protonated_SMARTS = temp_molObj.WriteSMARTSString(
+                    HandleAromaticity=False
+                )
                 try:
                     protonated_molObj = Molecule.ReadSMARTSString(
-                        protonated_SMARTS, f"{temp_molObj.Identifier}-AtomIdx{acidic_atom_idx}"
+                        protonated_SMARTS,
+                        f"{temp_molObj.Identifier}-AtomIdx{acidic_atom_idx}",
                     )
                     if protonated_molObj is None:
                         continue
@@ -3193,7 +3287,9 @@ class Molecule:
                     continue
                 transformation_inchi = f"{protonated_inchi}>>{deprotonated_inchi}"
                 if transformation_inchi in pka_fragment_dict:
-                    self.AtomsList[basic_atom_idx].pKb = pka_fragment_dict[transformation_inchi]
+                    self.AtomsList[basic_atom_idx].pKb = pka_fragment_dict[
+                        transformation_inchi
+                    ]
 
     # === Get atomic descriptors ===
 
@@ -3203,7 +3299,9 @@ class Molecule:
         NumRadialBasisFunctions: int = 8,
         MaxDegreeSphericalHarm: int = 6,
         AtomicSymbols: list[str] | None = None,
+        IndivdualAtomsOnly: str | list[str] | None = None,
         periodic: bool = False,
+        soap: SOAP | None = None,
     ):
         """
         Using DScribe python package to calculate atomic SOAP descriptors for MLP training.
@@ -3220,19 +3318,31 @@ class Molecule:
             periodic -- Is the ASE Atoms object structure periodic or not (default = False)
         """
         if AtomicSymbols is None:
-            AtomicSymbols = list({atomObj.AtomicSymbol for atomObj in self.AtomsList})
-        soap = SOAP(
-            species=AtomicSymbols,
-            r_cut=RadiusCutOff,
-            n_max=NumRadialBasisFunctions,
-            l_max=MaxDegreeSphericalHarm,
-            periodic=periodic,
-        )
-        aseMolObj = self.MoleculeToASEMolecule()
-        for idx, atomObj in enumerate(self.AtomsList):
-            atomObj.SOAPDescriptor = list(
-                float(i) for i in soap.create(aseMolObj, centers=[idx])[0]
+            AtomicSymbols = list(
+                {atomObj.AtomicSymbol for atomObj in self.AtomsList}
             )
+        if soap is None:    
+            soap = SOAP(
+                species=AtomicSymbols,
+                r_cut=RadiusCutOff,
+                n_max=NumRadialBasisFunctions,
+                l_max=MaxDegreeSphericalHarm,
+                periodic=periodic,
+            )
+        centres = []
+        if IndivdualAtomsOnly is None:
+            centres = [i for i in range(self.NumberOfAtoms)]
+        elif type(IndivdualAtomsOnly) is str:
+            for idx, atomObj in enumerate(self.AtomsList):
+                if atomObj.AtomicSymbol == IndivdualAtomsOnly:
+                    centres.append(idx)
+        elif type(IndivdualAtomsOnly) is list:
+            for idx, atomObj in enumerate(self.AtomsList):
+                if atomObj.AtomicSymbol in IndivdualAtomsOnly:
+                    centres.append(idx)
+        soap_descriptors = soap.create(self.MoleculeToASEMolecule(), centers=centres, n_jobs=1)
+        for atom_idx, soap_des in zip(centres, soap_descriptors):
+            self.AtomsList[atom_idx].SOAPDescriptor = soap_des
 
     # === Get molecule descriptors ===
 
@@ -3408,7 +3518,7 @@ class Molecule:
             if atomObj.Gradient is not None:
                 mol_str += f" XGD={atomObj.Gradient[0]} YGD={atomObj.Gradient[1]} ZGD={atomObj.Gradient[2]}"
             if atomObj.SOAPDescriptor is not None:
-                mol_str += f" SPD={str(atomObj.SOAPDescriptor).replace(' ', '')}"
+                mol_str += f" SPD={str(list([float(i) for i in atomObj.SOAPDescriptor])).replace(' ', '')}"
             if atomObj.MullikenCharge is not None:
                 mol_str += f" MKC={atomObj.MullikenCharge}"
             if atomObj.LowdinCharge is not None:
@@ -3556,7 +3666,7 @@ class Molecule:
             if sub_SMARTS == "":
                 continue
             if "=" == sub_SMARTS[0] and sub_SMARTS[1:].isdigit():
-                continue 
+                continue
             if "[" not in sub_SMARTS:
                 continue
             sub_SMARTS = sub_SMARTS.split("[")[-1]
@@ -3664,12 +3774,10 @@ class Molecule:
         molObj = deepcopy(self)
         molObj.AtomsList[AtomIndex].SMARTSCentre = True
         # Identify the framgment by defining where the SMARTS centres are
-        n_atoms_dict = {
-            molObj.AtomsList[AtomIndex].Label: molObj.AtomsList[AtomIndex]
-        }
+        n_atoms_dict = {molObj.AtomsList[AtomIndex].Label: molObj.AtomsList[AtomIndex]}
         for n_atom in molObj.GetAtomNeighbours(AtomIndex=AtomIndex):
             n_atom.SMARTSCentre = True
-        for _ in range(TopologicalRadius-1):
+        for _ in range(TopologicalRadius - 1):
             new_n_atoms_dict = {}
             for atomLabel in n_atoms_dict:
                 n_atoms = molObj.GetAtomNeighbours(AtomLabel=atomLabel)
@@ -4232,7 +4340,7 @@ python {self.Identifier}.py"""
         max_time: int = 2880,
     ):
         time = _GeneralHelper_MinutesToHHMMSS(max_time)
-        bash_str =  f"""#!/bin/bash
+        bash_str = f"""#!/bin/bash
 #SBATCH --job-name=CREST_{self.Identifier}
 #SBATCH --time={time}
 #SBATCH --mem={max_memory}
@@ -4326,7 +4434,7 @@ crest {self.Identifier}.toml --T {CPU_count} > {self.Identifier}.out"""
                                 self.AtomsDict[n_atom.Label][0],
                                 np.linalg.norm(
                                     atomObj.Coordinates - n_atom.Coordinates
-                                )
+                                ),
                             ]
                         )
                     break
@@ -4453,15 +4561,17 @@ crest {self.Identifier}.toml --T {CPU_count} > {self.Identifier}.out"""
             pbc=False,
         )
         ASEMolecule.info["charge"] = int(self.FormalCharge)
-        ASEMolecule.info["spin"] = int(self.Multiplicity)               # read by MACE-POLAR and UMA
-        ASEMolecule.info["spin_multiplicity"] = int(self.Multiplicity)  # keep for existing code
+        ASEMolecule.info["spin"] = int(self.Multiplicity)  # read by MACE-POLAR and UMA
+        ASEMolecule.info["spin_multiplicity"] = int(
+            self.Multiplicity
+        )  # keep for existing code
         return ASEMolecule
 
     # === Read molecule files ===
 
     @classmethod
     def MoleculeFromScratch(
-        cls, 
+        cls,
         AtomicSymbols: list[str],
         FormalCharges: list[int],
         FormalMultiplicities: list[int],
@@ -4480,7 +4590,7 @@ crest {self.Identifier}.toml --T {CPU_count} > {self.Identifier}.out"""
                     Coordinates=Coordinate,
                     Gradient=Gradient,
                     Multiplicity=FormalMultiplicity,
-                    FormalCharge=FormalCharge
+                    FormalCharge=FormalCharge,
                 )
             )
         BondOrderMatrix = BondOrderMatrix.round(0)
@@ -4656,7 +4766,7 @@ crest {self.Identifier}.toml --T {CPU_count} > {self.Identifier}.out"""
             "> <Wallclock time taken (seconds)>": "wallclock_time_sec",
             "> <Number of CPU cores used>": "num_CPU_used",
             "> <Number of primitive basis functions>": "num_prim_basis_functions",
-            "> <Spin contaimination (S**2)>": "spin_contamination"
+            "> <Spin contaimination (S**2)>": "spin_contamination",
         }
         for idx, line in enumerate(lines):
             attr = property_map.get(line.strip())
@@ -4839,7 +4949,12 @@ crest {self.Identifier}.toml --T {CPU_count} > {self.Identifier}.out"""
 
     @classmethod
     def ReadXYZFile(
-        cls, xyz_string: str, identifier: str, charge: int, multiplicity: int, guess_atom_multiplicities: bool = False,
+        cls,
+        xyz_string: str,
+        identifier: str,
+        charge: int,
+        multiplicity: int,
+        guess_atom_multiplicities: bool = False,
     ) -> "Molecule":
         G_full = build_graph(
             atoms=xyz_string,
@@ -4932,7 +5047,7 @@ crest {self.Identifier}.toml --T {CPU_count} > {self.Identifier}.out"""
         SuppressRDKitWarnings: bool = True,
         OptimiseGeometry: bool = False,
     ) -> "Molecule":
-        
+
         if SuppressRDKitWarnings == True:
             RDLogger.DisableLog("rdApp.warning")
             RDLogger.DisableLog("rdApp.error")
@@ -4940,12 +5055,14 @@ crest {self.Identifier}.toml --T {CPU_count} > {self.Identifier}.out"""
         try:
             RDKitMolObj = Chem.MolFromSmarts(SMARTS)
         except TypeError:
-            print(f"Was not able to convert '{SMARTS}' into RDKit object inorder to return Molecule Object\nReturned None")
+            print(
+                f"Was not able to convert '{SMARTS}' into RDKit object inorder to return Molecule Object\nReturned None"
+            )
             return None
         if RDKitMolObj is None:
             raise ValueError(f"RDKit failed to parse SMILES: {SMARTS}")
 
-        RDKitMolObj = Chem.RWMol(RDKitMolObj)          # editable copy
+        RDKitMolObj = Chem.RWMol(RDKitMolObj)  # editable copy
         # Convert metal ligand single bonds to dative bonds
         for bond in list(RDKitMolObj.GetBonds()):
             if bond.GetBondType() == Chem.BondType.DATIVE:
@@ -4953,7 +5070,7 @@ crest {self.Identifier}.toml --T {CPU_count} > {self.Identifier}.out"""
             atom1, atom2 = bond.GetBeginAtom(), bond.GetEndAtom()
             is_metal_1 = BOOL_METAL.get(atom1.GetSymbol(), False)
             is_metal_2 = BOOL_METAL.get(atom2.GetSymbol(), False)
-            if is_metal_1 == is_metal_2:        # both metals or both non-metals: skip
+            if is_metal_1 == is_metal_2:  # both metals or both non-metals: skip
                 continue
             # Begin atom must be the donor (ligand), end atom the acceptor (metal)
             if is_metal_1:
@@ -4962,11 +5079,11 @@ crest {self.Identifier}.toml --T {CPU_count} > {self.Identifier}.out"""
                 donor_idx, metal_idx = atom1.GetIdx(), atom2.GetIdx()
             RDKitMolObj.RemoveBond(donor_idx, metal_idx)
             RDKitMolObj.AddBond(donor_idx, metal_idx, Chem.BondType.DATIVE)
-        
+
         if AddHydrogens == True:
             RDKitMolObj.UpdatePropertyCache(strict=False)
             RDKitMolObj = Chem.AddHs(RDKitMolObj)
-        
+
         embed_result = AllChem.EmbedMolecule(RDKitMolObj)
         if embed_result != 0:
             for _ in range(10):
@@ -6174,8 +6291,13 @@ crest {self.Identifier}.toml --T {CPU_count} > {self.Identifier}.out"""
             )
         self.DeriveBasicAttributes()
 
-    def RattleAtomCoordinates(self, sigma: float, rng: np.random.Generator | None = None,
-                            seed: int | None = None):
+    def RattleAtomCoordinates(
+        self,
+        sigma: float,
+        rng: np.random.Generator | None = None,
+        seed: int | None = None,
+        max_displacement: float = 3.0,
+    ):
         if rng is None:
             rng = np.random.default_rng(seed)
         # Uniform random direction per atom
@@ -6183,10 +6305,9 @@ crest {self.Identifier}.toml --T {CPU_count} > {self.Identifier}.out"""
         directions /= np.linalg.norm(directions, axis=1, keepdims=True)
         # Half-normal distance per atom
         distances = np.abs(rng.normal(0.0, sigma, size=self.NumberOfAtoms))
+        distances = np.minimum(distances, max_displacement)
         displacements = directions * distances[:, None]
-        for atomObj, displacement in zip(
-            self.AtomsList, displacements
-        ):
+        for atomObj, displacement in zip(self.AtomsList, displacements):
             atomObj.Coordinates += displacement
 
     # === Translate and Rotate Molecule, and Geometry Functions ===
@@ -6852,8 +6973,8 @@ $end"""
 
     def SinglePoint_MACE(
         self,
-        model: str="MACE-POLAR",
-        solvent_correction: str | None=None,
+        model: str = "MACE-POLAR",
+        solvent_correction: str | None = None,
         CPU_count: int = 1,
     ):
         _MACEHelper_SetThreads(CPU_count)
@@ -6867,7 +6988,9 @@ $end"""
             ASEMolObj.info["spin"] = self.Multiplicity
         ASEMolObj.calc = calc
         self.electronic_energy = ASEMolObj.get_potential_energy() / Eh_to_eV
-        for atomObj, force, charge in zip(self.AtomsList, ASEMolObj.get_forces(), calc.results["charges"]):
+        for atomObj, force, charge in zip(
+            self.AtomsList, ASEMolObj.get_forces(), calc.results["charges"]
+        ):
             atomObj.Gradient = force * -1 * Eh_to_eV
             atomObj.MullikenCharge = charge
         self.calculation_method = model
@@ -6882,7 +7005,7 @@ $end"""
 
     def OptimiseGeometry_MACE(
         self,
-        model: str="MACE-POLAR",
+        model: str = "MACE-POLAR",
         model_size: str = "large",
         default_dtype: str = "float64",
         device: str = "cpu",
@@ -6890,7 +7013,7 @@ $end"""
         trajectory: str | None = None,
         logfile: str | None = "-",
         optimiser: str = "BFGS",
-        fmax: float = 0.0154,          # eV/Å (ASE's convergence criterion, same as ORCA)
+        fmax: float = 0.0154,  # eV/Å (ASE's convergence criterion, same as ORCA)
         steps: int = 500,
         CPU_count: int = 1,
     ):
@@ -6898,7 +7021,7 @@ $end"""
 
         from ase.optimize import BFGS, FIRE, LBFGS
         from ase.constraints import FixAtoms
-        
+
         self.DeleteCalculatedAttributes()
         self.DeriveBasicAttributes()
 
@@ -6927,7 +7050,7 @@ $end"""
             calc.results["charges"],
             ASEMolObj.get_positions(),
         ):
-            atomObj.Gradient = -force / Eh_to_eV   # Eh/Å (see the note on units below)
+            atomObj.Gradient = -force / Eh_to_eV  # Eh/Å (see the note on units below)
             atomObj.MullikenCharge = charge
             atomObj.Coordinates = pos
 

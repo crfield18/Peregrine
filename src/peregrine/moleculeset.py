@@ -32,6 +32,8 @@ import pandas as pd
 
 import numpy as np
 
+from dscribe.descriptors import SOAP
+
 
 def _GeneralHelper_CalculateRAM(
     package: str,
@@ -213,6 +215,7 @@ def _GeneralHelper_LoadMolFile(mol_file_directory: str, mol_file: str) -> "Molec
 def _MACEHelper_InitWorker():
     os.environ["OMP_NUM_THREADS"] = "1"
     import torch
+
     torch.set_num_threads(1)
     warnings.filterwarnings("ignore")
 
@@ -345,7 +348,10 @@ class MoleculeSet:
 
     @classmethod
     def ReadMolFileDirectory(
-        cls, mol_file_directory: str, do_not_read_opt_traj_files: bool = False, parallel: bool = False
+        cls,
+        mol_file_directory: str,
+        do_not_read_opt_traj_files: bool = False,
+        parallel: bool = False,
     ) -> "MoleculeSet":
         mol_file_list = [
             i for i in os.listdir(mol_file_directory) if i.endswith(".mol")
@@ -364,7 +370,8 @@ class MoleculeSet:
             self = cls()
             with ProcessPoolExecutor(max_workers=max_workers) as executor:
                 for molObj in executor.map(
-                    partial(_GeneralHelper_LoadMolFile, mol_file_directory), mol_file_list
+                    partial(_GeneralHelper_LoadMolFile, mol_file_directory),
+                    mol_file_list,
                 ):
                     self.MoleculesDict[molObj.Identifier] = molObj
             return self
@@ -385,7 +392,7 @@ class MoleculeSet:
         conf_id = 0
         for idx in range(0, len(trj_list), xyz_file_length):
             AtomsList = []
-            for atom_coords in trj_list[idx+2:idx+xyz_file_length]:
+            for atom_coords in trj_list[idx + 2 : idx + xyz_file_length]:
                 atom_coords = [i for i in atom_coords.split(" ") if i != ""]
                 AtomsList.append(
                     Atom(
@@ -409,7 +416,7 @@ class MoleculeSet:
             conf_id += 1
             instance.AddMolecule(molObj)
         return instance
-            
+
     @classmethod
     def ReadZippedMolFileDirectory(
         cls,
@@ -421,7 +428,10 @@ class MoleculeSet:
         if not zipfile.is_zipfile(zip_file_path):
             raise ValueError(f"{zip_file_path} is not a valid zip file")
 
-        with zipfile.ZipFile(zip_file_path) as zf, tempfile.TemporaryDirectory() as tmpdir:
+        with (
+            zipfile.ZipFile(zip_file_path) as zf,
+            tempfile.TemporaryDirectory() as tmpdir,
+        ):
             seen = set()
             for info in zf.infolist():
                 if info.is_dir():
@@ -540,6 +550,7 @@ class MoleculeSet:
         # TODO: proper treatment of mayers bond orders
         """
         from .atom import ATOMIC_NUMBERS_TO_SYMBOLS
+
         with h5py.File(hdf5_file_path) as hdf5_file:
             try:
                 group = hdf5_file[group_name]
@@ -563,20 +574,16 @@ class MoleculeSet:
                 hdf5_file.visititems(_show)
                 return None
         # Conversion for before making Molecule Objects
-        atomic_symbols = [ATOMIC_NUMBERS_TO_SYMBOLS[atomic_number] for atomic_number in atomic_numbers]
+        atomic_symbols = [
+            ATOMIC_NUMBERS_TO_SYMBOLS[atomic_number] for atomic_number in atomic_numbers
+        ]
         if convert_coords_units == "Bohr_to_Ang":
             conformations = conformations * BohrRad_to_Angstrom
         if convert_grad_units == "Eh/Bohr_to_Eh/Ang":
             gradients = gradients * (1 / BohrRad_to_Angstrom)
         instance = cls()
         idx = 0
-        for (
-            elec_en,
-            mayer_BO,
-            gradient,
-            conformation,
-            charges
-        ) in zip(
+        for elec_en, mayer_BO, gradient, conformation, charges in zip(
             elec_ens,
             mayer_BOs,
             gradients,
@@ -590,13 +597,13 @@ class MoleculeSet:
                 Coordinates=conformation,
                 Gradients=gradient,
                 BondOrderMatrix=mayer_BO,
-                Identifier=f"{group_name}_{idx}"
+                Identifier=f"{group_name}_{idx}",
             )
             idx += 1
             molObj.electronic_energy = elec_en
             instance.MoleculesDict[molObj.Identifier] = molObj
         return instance
-        
+
     def ReadORCA6OutputDirectory(
         self,
         input_file_path: str,
@@ -737,12 +744,12 @@ class MoleculeSet:
         # Resubmit previous calculations only if unsuccessful
         if self.ResultsDF is not None:
             df = self.ResultsDF
-            #freq6 = pd.to_numeric(df["Vibrational Frequency 6 (cm-1)"], errors="coerce")
+            # freq6 = pd.to_numeric(df["Vibrational Frequency 6 (cm-1)"], errors="coerce")
             mask = df["Error Code"].notna()
             molObj_list = [self.MoleculesDict[i] for i in df.loc[mask, "Identifier"]]
         else:
             molObj_list = list(self.MoleculesDict.values())
-        
+
         for molObj in molObj_list:
             pyscf_str = molObj.WritePySCFInput(
                 method=method,
@@ -1049,7 +1056,7 @@ class MoleculeSet:
         output_mol_file_directory: str,
         template_moleculeset: "MoleculeSet | None" = None,
     ) -> "MoleculeSet":
-        
+
         dir_list = os.listdir(orca_file_directory)
         # Remove unnessicary files
         # Track files to .out files to read
@@ -1079,10 +1086,7 @@ class MoleculeSet:
         # Read ORCA output files
         instance = MoleculeSet()
         for out_file in sorted(out_files):
-            if (
-                len(out_file.split(".")) != 2
-                and out_file.split(".")[-1] != "out"
-            ):
+            if len(out_file.split(".")) != 2 and out_file.split(".")[-1] != "out":
                 continue
             Identifier = str(out_file).split(".")[0]
             if template_moleculeset is None:
@@ -1151,9 +1155,13 @@ class MoleculeSet:
                 ],
                 "Vibrational Frequency 6 (cm-1)": [
                     (
-                        None if molObj.vibrational_frequencies is None
-                        else molObj.vibrational_frequencies[5][1] if len(molObj.vibrational_frequencies) == 6
-                        else molObj.vibrational_frequencies[6][1]
+                        None
+                        if molObj.vibrational_frequencies is None
+                        else (
+                            molObj.vibrational_frequencies[5][1]
+                            if len(molObj.vibrational_frequencies) == 6
+                            else molObj.vibrational_frequencies[6][1]
+                        )
                     )
                     for molObj in instance.MoleculesDict.values()
                 ],
@@ -1291,7 +1299,9 @@ class MoleculeSet:
         instance = MoleculeSet()
         instance.ResultsDF = pd.DataFrame()
         identifiers = [
-            i.split(".")[0] for i in os.listdir(pyscf_file_directory) if i.split(".")[-1] == "py"
+            i.split(".")[0]
+            for i in os.listdir(pyscf_file_directory)
+            if i.split(".")[-1] == "py"
         ]
         for identifier in identifiers:
             try:
@@ -1366,9 +1376,13 @@ class MoleculeSet:
                 ],
                 "Vibrational Frequency 6 (cm-1)": [
                     (
-                        None if molObj.vibrational_frequencies is None
-                        else molObj.vibrational_frequencies[5][1] if len(molObj.vibrational_frequencies) == 6
-                        else molObj.vibrational_frequencies[6][1]
+                        None
+                        if molObj.vibrational_frequencies is None
+                        else (
+                            molObj.vibrational_frequencies[5][1]
+                            if len(molObj.vibrational_frequencies) == 6
+                            else molObj.vibrational_frequencies[6][1]
+                        )
                     )
                     for molObj in instance.MoleculesDict.values()
                 ],
@@ -1376,7 +1390,7 @@ class MoleculeSet:
         )
         instance.ResultsDF.to_csv(str(output_mol_file_directory) + ".csv")
         return instance
-        
+
     @classmethod
     def ReadCRESTOutput(
         cls,
@@ -1395,7 +1409,8 @@ class MoleculeSet:
                 "crest_conformers.xyz" in file_list
                 and os.path.getsize(
                     f"{crest_file_directory}/{identifier}/crest_conformers.xyz"
-                ) != 0
+                )
+                != 0
             ):
                 for molObj in Molecule.ReadCRESTOutput(
                     xyz_file=f"{crest_file_directory}/{identifier}/crest_conformers.xyz",
@@ -1477,52 +1492,6 @@ class MoleculeSet:
 
     # === Execute a workflow of some kind ===
 
-    def CalculateAtomicSOAPDescriptors(
-        self,
-        output_mol_file_directory: str | None = None,
-        output_csv_file_directory: str | None = None,
-        RadiusCutOff: float = 5.0,
-        NumRadialBasisFunctions: int = 8,
-        MaxDegreeSphericalHarm: int = 6,
-        AtomicSymbols: list[str] | None = None,
-        periodic: bool = False,
-    ):
-        """
-        Using DScribe python package to calculate atomic SOAP descriptors for MLP training.
-
-        DScribe SOAP() object is initialised
-        Molecule object is converted to ASE Atoms object
-        ASE atoms object is used to feed into SOAP() object and calculate SOAP descriptors
-
-        Keyword arguments:
-            RadiusCutOff -- MLPs are based on atomic centred clusters, so how many atoms will be included in the defined radius for the soap descriptor (default = 5 angstrom)
-            NumRadialBasisFunctions --
-            MaxDegreeSphericalHarm --
-            AtomicSymbols -- Chemical elements used to construct descriptor (species in DScribe) (default is the chemical elements that exists in the molObj)
-            periodic -- Is the ASE Atoms object structure solid state periodic or not (default = False)
-        """
-        if output_mol_file_directory is not None:
-            os.makedirs(output_mol_file_directory, exist_ok=True)
-
-            def process(item):
-                identifier, molObj = item
-                molObj_copy = deepcopy(molObj)
-                molObj_copy.GetSOAPDescriptors(
-                    RadiusCutOff=RadiusCutOff,
-                    NumRadialBasisFunctions=NumRadialBasisFunctions,
-                    MaxDegreeSphericalHarm=MaxDegreeSphericalHarm,
-                    periodic=periodic,
-                )
-                with open(f"{output_mol_file_directory}/{identifier}.mol", "w") as f:
-                    f.write(molObj_copy.WriteMolString())
-                del molObj_copy
-
-            with ThreadPoolExecutor(max_workers=int(os.cpu_count() / 2)) as executor:
-                list(executor.map(process, self.MoleculesDict.items()))
-        elif output_csv_file_directory is not None:
-            print("Write code to create CSV file")
-            pass
-
     def OptimiseGeometry_xTB_bin(
         self,
         xtb_binary_path: str | None = None,
@@ -1581,11 +1550,15 @@ class MoleculeSet:
     def OptimiseGeometry_MACE(self, n_workers=None):
         n_workers = n_workers or os.cpu_count() - 2
         ctx = mp.get_context("spawn")
-        with ProcessPoolExecutor(n_workers, mp_context=ctx, initializer=_MACEHelper_InitWorker) as pool:
-            for key, molObj in pool.map(_MACEHelper_OptimiseOne, self.MoleculesDict.items()):
+        with ProcessPoolExecutor(
+            n_workers, mp_context=ctx, initializer=_MACEHelper_InitWorker
+        ) as pool:
+            for key, molObj in pool.map(
+                _MACEHelper_OptimiseOne, self.MoleculesDict.items()
+            ):
                 self.MoleculesDict[key] = molObj
 
-    def MACE(self, solvent_correction: str | None=None):
+    def MACE(self, solvent_correction: str | None = None):
         for molObj in self.MoleculesDict.values():
             molObj.SinglePoint_MACE(solvent_correction=solvent_correction)
 
@@ -1698,14 +1671,14 @@ class MoleculeSet:
         return RMSD_df
 
     def AssignBonds(self):
-        self.WriteXYZFileDirectory(
-            f"{str(Path(__file__).parent)}/temp_XYZ_files"
-        )
+        self.WriteXYZFileDirectory(f"{str(Path(__file__).parent)}/temp_XYZ_files")
         for molObj in self.MoleculesDict.values():
             identifier = molObj.Identifier
             formal_charge = molObj.FormalCharge
             multiplicity = molObj.Multiplicity
-            with open(Path(__file__).parent / "temp_XYZ_files" / f"{identifier}.xyz", "r") as f:
+            with open(
+                Path(__file__).parent / "temp_XYZ_files" / f"{identifier}.xyz", "r"
+            ) as f:
                 xyz_string = f.read()
                 f.close()
             new_molObj = Molecule.ReadXYZFile(
@@ -1730,10 +1703,10 @@ class MoleculeSet:
         RMSD_matrix = np.zeros((len(self.MoleculesDict), len(self.MoleculesDict)))
         molecules_list = list(self.MoleculesDict.values())
         for idx1, molObj1 in enumerate(molecules_list):
-            for idx2, molObj2 in enumerate(molecules_list[idx1+1:]):
+            for idx2, molObj2 in enumerate(molecules_list[idx1 + 1 :]):
                 RMSD = molObj1.CalculateRMSD(molObj2)
-                RMSD_matrix[idx1][idx2+idx1+1] = RMSD
-                RMSD_matrix[idx2+idx1+1][idx1] = RMSD
+                RMSD_matrix[idx1][idx2 + idx1 + 1] = RMSD
+                RMSD_matrix[idx2 + idx1 + 1][idx1] = RMSD
         res = kmedoids.fasterpam(RMSD_matrix, 5)
         kmedoids_molObj_set = MoleculeSet()
         for idx in res.medoids:
@@ -1745,10 +1718,47 @@ class MoleculeSet:
         self,
         sigma: float,
         rng: np.random.Generator | None = None,
-        seed: int | None = None
+        seed: int | None = None,
     ):
         for molObj in self.MoleculesDict.values():
-            molObj.RattleAtomCoordinates(
-                sigma=sigma, rng=rng, seed=seed
+            molObj.RattleAtomCoordinates(sigma=sigma, rng=rng, seed=seed)
+
+    def CalculateSOAPDescriptors(
+        self,
+        RadiusCutOff: float = 5.0,
+        NumRadialBasisFunctions: int = 8,
+        MaxDegreeSphericalHarm: int = 6,
+        AtomicSymbols: list[str] | None = None,
+        IndivdualAtomsOnly: str | list[str] | None = None,
+        periodic: bool = False,
+        soap_guard_radius: None | float = 100.0,
+        filter_failed_calc_soap_des: bool = True,
+    ):
+        idx = 0
+        soap = SOAP(
+            species=AtomicSymbols,
+            r_cut=RadiusCutOff,
+            n_max=NumRadialBasisFunctions,
+            l_max=MaxDegreeSphericalHarm,
+            periodic=periodic,
+        )
+        molObjs_to_remove = []
+        for molObj in self.MoleculesDict.values():
+            idx += 1
+            if (
+                soap_guard_radius is not None
+                and molObj.GetMoleculeRadius() > soap_guard_radius
+            ):
+                molObjs_to_remove.append(molObj)
+                continue
+            molObj.GetSOAPDescriptors(
+                RadiusCutOff=RadiusCutOff,
+                NumRadialBasisFunctions=NumRadialBasisFunctions,
+                MaxDegreeSphericalHarm=MaxDegreeSphericalHarm,
+                AtomicSymbols=AtomicSymbols,
+                IndivdualAtomsOnly=IndivdualAtomsOnly,
+                periodic=periodic,
+                soap=soap,
             )
-    
+        if filter_failed_calc_soap_des == True:
+            self.RemoveMolecule(molObjs_to_remove)
