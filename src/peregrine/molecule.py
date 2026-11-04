@@ -1372,8 +1372,9 @@ spherical
 {combined_jkfit}
 ''', name='myjkfit', key='DF_BASIS_SCF')
 psi4.set_options({
-    'guess': 'core',
+    'guess': 'sap',
     'scf_type': 'df',
+    "maxiter": 200,
 })
 """
     return psi4_str
@@ -1559,7 +1560,30 @@ S2_exact = Sz * (Sz + 1.0)
 S2_observed = S2_exact + nbeta - overlap_sq_sum
 spin_deviation = S2_observed - S2_exact
 metadata['Spin Contaimination (<S**2>)'] = spin_deviation"""
-    calculate_gradient_general = (
+    calculate_gradient_uhf = (
+        f"""try:
+    e_sp, wfn = psi4.gradient(
+        '{method}',
+        molecule=psi4MolObj,
+        return_wfn=True,
+    )
+except psi4.driver.p4util.exceptions.SCFConvergenceError as exc:
+    metadata['Maximum RAM used (MB)'] = int(get_max_rss_mb())
+    metadata['SCF error at failure'] = """
+        + """{
+        'iteration': exc.iteration,
+        'e_conv': exc.e_conv,
+        'd_conv': exc.d_conv,
+    }
+    failed_wfn = exc.wfn  # partial wavefunction at the point of failure
+    coords_bohr = np.array(failed_wfn.molecule().geometry())
+    metadata['Coordinates (Bohr)'] = coords_bohr.tolist()
+    with open("""
+        + f"""'{identifier}.meta.json', 'w') as f:
+        json.dump(metadata, f, indent=2)
+    exit()"""
+    )
+    calculate_gradient_rhf = (
         f"""try:
     e_sp, wfn = psi4.gradient(
         '{method}',
@@ -1767,7 +1791,7 @@ psi4.set_options({
         and get_gradient == True
     ):
         psi4_str += f"""
-{calculate_gradient_general}
+{calculate_gradient_uhf}
 {save_properties_uhf}
 {save_fock_matrix_uhf}
 {calculate_spin_contaim_uhf}
@@ -1780,7 +1804,7 @@ psi4.set_options({
         and get_gradient == True
     ):
         psi4_str += f"""
-{calculate_gradient_general}
+{calculate_gradient_rhf}
 {save_properties_rhf}
 {save_fock_matrix_rhf}
 {save_HOMO_LUMO_general}
@@ -1812,6 +1836,7 @@ import resource
 import psi4
 import basis_set_exchange as bse
 import numpy as np
+import os
 
 T = 298.15
 
@@ -1821,6 +1846,8 @@ def get_max_rss_mb():
         return raw / (1024 * 1024)
     return raw / 1024
 
+if platform.system().lower() == 'linux':
+    psi4.core.IOManager.shared_object().set_default_path(os.environ["PSI_SCRATCH"])
 psi4.set_output_file('{identifier}.out', False)
 psi4.set_memory('{max_memory} MB')
 psi4.set_num_threads({CPU_count})
@@ -4210,10 +4237,18 @@ rm slurm-$SLURM_JOB_ID.out
 INPUT_DIR=$(pwd)
 SCRATCH_DIR={scratch_dir}/$SLURM_JOB_ID
 
+PSI_TMP=$SCRATCH_DIR/psi_tmp # Psi4 integral/DF files go here if there is not enough RAM
+mkdir -p "$PSI_TMP"
+lfs setstripe -c -1 "$PSI_TMP" 2>/dev/null || true   # stripe big files across Lustre (only affects this dir)
+
 mkdir -p $SCRATCH_DIR
 cd $SCRATCH_DIR
-
 cp $INPUT_DIR/{job_name}.py $SCRATCH_DIR
+
+export PSI_SCRATCH=$PSI_TMP
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
+export MKL_NUM_THREADS=$SLURM_CPUS_PER_TASK
+export MALLOC_ARENA_MAX=2
 
 {psi4_command}
 

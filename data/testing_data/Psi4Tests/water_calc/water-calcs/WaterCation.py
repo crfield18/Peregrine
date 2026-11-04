@@ -7,6 +7,7 @@ import resource
 import psi4
 import basis_set_exchange as bse
 import numpy as np
+import os
 
 T = 298.15
 
@@ -16,8 +17,10 @@ def get_max_rss_mb():
         return raw / (1024 * 1024)
     return raw / 1024
 
+if platform.system().lower() == 'linux':
+    psi4.core.IOManager.shared_object().set_default_path(os.environ["PSI_SCRATCH"])
 psi4.set_output_file('WaterCation.out', False)
-psi4.set_memory('1000 MB')
+psi4.set_memory('4634 MB')
 psi4.set_num_threads(4)
 
 metadata = {
@@ -46,8 +49,8 @@ nocom
 
 # Define basis sets
 element_basis_map = {
-    'H': 'def2-tzvppd',
     'O': 'def2-tzvppd',
+    'H': 'def2-tzvppd',
 }
 combined_basis = '\n'.join(
     bse.get_basis(basisname, elements=[symbol], fmt='psi4', header=False)
@@ -61,8 +64,8 @@ spherical
 ''', name='mybasis', key='BASIS')
 metadata['Basis Set'] = element_basis_map
 jkfit_basis_map = {
-    'H': 'def2-universal-jkfit',
     'O': 'def2-universal-jkfit',
+    'H': 'def2-universal-jkfit',
 }
 combined_jkfit = '\n'.join(
     bse.get_basis(basisname, elements=[symbol], fmt='psi4', header=False)
@@ -75,13 +78,14 @@ spherical
 {combined_jkfit}
 ''', name='myjkfit', key='DF_BASIS_SCF')
 psi4.set_options({
-    'guess': 'core',
+    'guess': 'sap',
     'scf_type': 'df',
+    "maxiter": 200,
 })
 
 # Set the shell restriction
-psi4.set_options({'reference': 'uhf'})
-metadata['Method'] = 'uhf wb97m-d3bj'
+psi4.set_options({'reference': 'rhf'})
+metadata['Method'] = 'rhf wb97m-d3bj'
 
 # Set up and run calculation
 try:
@@ -121,7 +125,6 @@ psi4.oeprop(
     'QUADRUPOLE',
     'MULLIKEN_CHARGES',
     'LOWDIN_CHARGES',
-    'LOWDIN_SPINS',
     'WIBERG_LOWDIN_INDICES',
     'MAYER_INDICES',
 )
@@ -129,30 +132,12 @@ metadata['Dipole'] = np.array(wfn.variable('CURRENT DIPOLE')).tolist()
 metadata['Quadrupole'] = np.array(wfn.variable('QUADRUPOLE')).tolist()
 metadata['Mulliken Charges'] = np.array(wfn.variable('MULLIKEN CHARGES')).tolist()
 metadata['Lowdin Charges'] = np.array(wfn.variable('LOWDIN CHARGES')).tolist()
-metadata['Lowdin Spin Populations'] = np.array(wfn.variable('LOWDIN SPINS')).tolist()
 metadata['Wiberg Bond Orders'] = np.array(wfn.array_variable('WIBERG LOWDIN INDICES')).tolist()
 metadata['Mayer Bond Orders']  = np.array(wfn.array_variable('MAYER INDICES')).tolist()
 # Save Fock matricies
-Fa_ao = np.array(wfn.Fa_subset('AO'))
-Fb_ao = np.array(wfn.Fb_subset('AO'))
-metadata['Alpha Fock Matrix File Name'] = 'WaterCation.alpha.fock'
-metadata['Beta Fock Matrix File Name'] = 'WaterCation.beta.fock'
-np.savetxt('WaterCation.alpha.fock', Fa_ao, fmt='%.16e')
-np.savetxt('WaterCation.beta.fock', Fb_ao, fmt='%.16e')
-# Get spin contaimination
-mints = psi4.core.MintsHelper(wfn.basisset())
-S_ao = np.array(mints.ao_overlap())                # AO-basis overlap, not symmetry-blocked
-Ca_occ = np.array(wfn.Ca_subset("AO", "OCC"))   # occupied alpha MO coeffs (AO basis)
-Cb_occ = np.array(wfn.Cb_subset("AO", "OCC"))   # occupied beta MO coeffs (AO basis)
-nalpha = wfn.nalpha()
-nbeta  = wfn.nbeta()
-mo_overlap = Ca_occ.T @ S_ao @ Cb_occ
-overlap_sq_sum = np.sum(mo_overlap**2)
-Sz = (nalpha - nbeta) / 2.0
-S2_exact = Sz * (Sz + 1.0)
-S2_observed = S2_exact + nbeta - overlap_sq_sum
-spin_deviation = S2_observed - S2_exact
-metadata['Spin Contaimination (<S**2>)'] = spin_deviation
+F_ao = np.array(wfn.Fa_subset('AO'))
+metadata['Fock Matrix File Name'] = 'WaterCation.fock'
+np.savetxt('WaterCation.fock', F_ao, fmt='%.16e')
 # Get HOMO and LUMO energies
 homo_idx = wfn.nalpha() - 1
 lumo_idx = wfn.nalpha()

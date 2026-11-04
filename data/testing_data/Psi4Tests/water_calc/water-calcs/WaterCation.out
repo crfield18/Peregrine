@@ -32,9 +32,9 @@
     -----------------------------------------------------------------------
 
 
-    Psi4 started on: Monday, 26 October 2026 02:22PM
+    Psi4 started on: Wednesday, 04 November 2026 02:27PM
 
-    Process ID: 21461
+    Process ID: 11342
     Host:       Samuels-MacBook-Pro.local
     PSIDATADIR: /Users/samuelmace/miniforge3/envs/psi4env/share/psi4
     Memory:     500.0 MiB
@@ -59,15 +59,15 @@ gradient() will perform analytic gradient computation.
     Solid Harmonics ordering:            Gaussian
 
 *** tstart() called on Samuels-MacBook-Pro.local
-*** at Mon Oct 26 14:22:59 2026
+*** at Wed Nov  4 14:27:48 2026
 
    => Loading Basis Set <=
 
     Name: MYBASIS
     Role: ORBITAL
     Keyword: BASIS
-    atoms 1, 3-4 entry H          line    46 inputblock mybasis 
-    atoms 2      entry O          line     5 inputblock mybasis 
+    atoms 1, 3-4 entry H          line     5 inputblock mybasis 
+    atoms 2      entry O          line    25 inputblock mybasis 
 
    => WB97M-D3BJ: Empirical Dispersion <=
 
@@ -117,11 +117,11 @@ gradient() will perform analytic gradient computation.
 
   ==> Algorithm <==
 
-  SCF Algorithm Type is DF.
+  SCF Algorithm Type is DISK_DF.
   DIIS enabled.
   MOM disabled.
   Fractional occupation disabled.
-  Guess Type is CORE.
+  Guess Type is SAP.
   Energy threshold   = 1.00e-08
   Density threshold  = 1.00e-08
   Integral threshold = 1.00e-12
@@ -183,8 +183,8 @@ gradient() will perform analytic gradient computation.
     Radial Points          =             75
     Spherical Points       =            302
     Total Points           =          88791
-    Total Blocks           =            720
-    Max Points             =            255
+    Total Blocks           =           1091
+    Max Points             =            128
     Max Functions          =             91
     Weights Tolerance      =       1.00E-15
 
@@ -193,27 +193,26 @@ gradient() will perform analytic gradient computation.
     Name: MYJKFIT
     Role: JKFIT
     Keyword: DF_BASIS_SCF
-    atoms 1, 3-4 entry H          line    67 inputblock myjkfit 
-    atoms 2      entry O          line     5 inputblock myjkfit 
+    atoms 1, 3-4 entry H          line     5 inputblock myjkfit 
+    atoms 2      entry O          line    23 inputblock myjkfit 
 
   ==> Integral Setup <==
 
-  DFHelper Memory: AOs need 0.026 GiB; user supplied 0.130 GiB. 
-  SCF_SUBTYPE=INCORE selected. In-core MEM_DF algorithm will be used.
-  Using in-core AOs.
+  SCF_SUBTYPE = OUT_OF_CORE selected. Out-of-core DISK_DF algorithm will be used.
 
-  ==> MemDFJK: Density-Fitted J/K Matrices <==
+  ==> DiskDFJK: Density-Fitted J/K Matrices <==
 
-    J tasked:                   Yes
-    K tasked:                   Yes
-    wK tasked:                  Yes
-    Omega:                3.000E-01
-    OpenMP threads:               4
-    Memory [MiB]:               133
-    Algorithm:                 Core
-    Schwarz Cutoff:           1E-12
-    Mask sparsity (%):       0.0000
-    Fitting Condition:        1E-10
+    J tasked:                  Yes
+    K tasked:                  Yes
+    wK tasked:                 Yes
+    Omega:               3.000E-01
+    OpenMP threads:              4
+    Integrals threads:           4
+    Memory [MiB]:              134
+    Algorithm:                Disk
+    Integral Cache:           NONE
+    Schwarz Cutoff:          1E-12
+    Fitting Condition:       1E-10
 
    => Auxiliary Basis Set <=
 
@@ -233,7 +232,26 @@ gradient() will perform analytic gradient computation.
 
   ==> Pre-Iterations <==
 
-  SCF Guess: Core (One-Electron) Hamiltonian.
+  SCF Guess: Superposition of Atomic Potentials (doi:10.1021/acs.jctc.8b01089).
+
+  ==> SAP guess <==
+
+   => Molecular Quadrature <=
+
+    Radial Scheme          =       TREUTLER
+    Pruning Scheme         =           NONE
+    Nuclear Scheme         =       TREUTLER
+
+    Blocking Scheme        =         OCTREE
+    BS radius alpha        =              1
+    Pruning alpha          =              1
+    Radial Points          =             75
+    Spherical Points       =            302
+    Total Points           =          88791
+    Total Blocks           =           1091
+    Max Points             =            128
+    Max Functions          =             91
+    Weights Tolerance      =       1.00E-15
 
    -------------------------------------------------------
     Irrep   Nso     Nmo     Nalpha   Nbeta   Ndocc  Nsocc
@@ -247,18 +265,16 @@ gradient() will perform analytic gradient computation.
 
                            Total Energy        Delta E     RMS |[F,P]|
 
-   @DF-UKS iter   1:   -63.88684033922893   -6.38868e+01   7.61993e-02 ADIIS/DIIS
-   @DF-UKS iter   2:   -66.19404834946137   -2.30721e+00   3.31093e-02 ADIIS/DIIS
-   @DF-UKS iter   3:   -74.75357149556025   -8.55952e+00   2.65127e-02 ADIIS/DIIS
-   @DF-UKS iter   4:   -76.62105646016562   -1.86748e+00   4.83264e-03 ADIIS/DIIS
-   @DF-UKS iter   5:   -76.70768933070616   -8.66329e-02   4.43227e-04 ADIIS/DIIS
-   @DF-UKS iter   6:   -76.70871156871598   -1.02224e-03   1.43232e-04 ADIIS/DIIS
-   @DF-UKS iter   7:   -76.70877669193780   -6.51232e-05   3.70177e-05 DIIS
-   @DF-UKS iter   8:   -76.70878320604415   -6.51411e-06   8.20790e-06 DIIS
-   @DF-UKS iter   9:   -76.70878359568707   -3.89643e-07   8.88169e-07 DIIS
-   @DF-UKS iter  10:   -76.70878359959174   -3.90467e-09   2.74720e-07 DIIS
-   @DF-UKS iter  11:   -76.70878359982041   -2.28667e-10   4.72110e-08 DIIS
-   @DF-UKS iter  12:   -76.70878359982891   -8.49809e-12   2.05114e-09 DIIS
+   @DF-UKS iter   1:   -76.47994791809674   -7.64799e+01   9.41297e-03 ADIIS/DIIS
+   @DF-UKS iter   2:   -76.45353267292300    2.64152e-02   9.49441e-03 ADIIS/DIIS
+   @DF-UKS iter   3:   -76.70705341509336   -2.53521e-01   7.80323e-04 ADIIS/DIIS
+   @DF-UKS iter   4:   -76.70875824153775   -1.70483e-03   9.39413e-05 DIIS
+   @DF-UKS iter   5:   -76.70878238630218   -2.41448e-05   1.52942e-05 DIIS
+   @DF-UKS iter   6:   -76.70878355937035   -1.17307e-06   1.89874e-06 DIIS
+   @DF-UKS iter   7:   -76.70878359827961   -3.89093e-08   4.10166e-07 DIIS
+   @DF-UKS iter   8:   -76.70878359974211   -1.46250e-09   8.85592e-08 DIIS
+   @DF-UKS iter   9:   -76.70878359983119   -8.90878e-11   1.58928e-08 DIIS
+   @DF-UKS iter  10:   -76.70878359983399   -2.79954e-12   1.48605e-09 DIIS
   Energy and wave function converged.
 
 
@@ -269,9 +285,9 @@ gradient() will perform analytic gradient computation.
       Nbeta    =    5.0000013594 ; deviation = 1.359e-06
       Ntotal   =   10.0000027188 ; deviation = 2.719e-06 
 
-   @Spin Contamination Metric:   1.776356839E-15
+   @Spin Contamination Metric:   5.329070518E-15
    @S^2 Expected:                0.000000000E+00
-   @S^2 Observed:                1.776356839E-15
+   @S^2 Observed:                5.329070518E-15
    @S   Expected:                0.000000000E+00
    @S   Observed:                0.000000000E+00
 
@@ -359,17 +375,17 @@ gradient() will perform analytic gradient computation.
     NA   [     5 ]
     NB   [     5 ]
 
-  @DF-UKS Final Energy:   -76.70878359982891
+  @DF-UKS Final Energy:   -76.70878359983399
 
    => Energetics <=
 
     Nuclear Repulsion Energy =             13.0935013200707431
-    One-Electron Energy =                -126.9063619832582219
-    Two-Electron Energy =                  43.7559729191017652
-    DFT Exchange-Correlation Energy =      -6.6504513983682045
+    One-Electron Energy =                -126.9063624132696475
+    Two-Electron Energy =                  43.7559733922458847
+    DFT Exchange-Correlation Energy =      -6.6504514415059877
     Empirical Dispersion Energy =          -0.0014444573749814
     VV10 Nonlocal Energy =                  0.0000000000000000
-    Total Energy =                        -76.7087835998289052
+    Total Energy =                        -76.7087835998339926
 
   UHF NO Occupations:
   HONO-2 :    3  A 2.0000000
@@ -403,18 +419,18 @@ Properties computed using the SCF density matrix
 
  ------------------------------------------------------------------------------------
 
-*** tstop() called on Samuels-MacBook-Pro.local at Mon Oct 26 14:23:01 2026
+*** tstop() called on Samuels-MacBook-Pro.local at Wed Nov  4 14:27:50 2026
 Module time:
-	user time   =       7.48 seconds =       0.12 minutes
-	system time =       0.12 seconds =       0.00 minutes
+	user time   =       6.57 seconds =       0.11 minutes
+	system time =       0.13 seconds =       0.00 minutes
 	total time  =          2 seconds =       0.03 minutes
 Total time:
-	user time   =       7.48 seconds =       0.12 minutes
-	system time =       0.12 seconds =       0.00 minutes
+	user time   =       6.57 seconds =       0.11 minutes
+	system time =       0.13 seconds =       0.00 minutes
 	total time  =          2 seconds =       0.03 minutes
 
 *** tstart() called on Samuels-MacBook-Pro.local
-*** at Mon Oct 26 14:23:01 2026
+*** at Wed Nov  4 14:27:50 2026
 
 
          ------------------------------------------------------------
@@ -519,8 +535,8 @@ Total time:
     Radial Points          =             75
     Spherical Points       =            302
     Total Points           =          88791
-    Total Blocks           =            720
-    Max Points             =            255
+    Total Blocks           =           1091
+    Max Points             =            128
     Max Functions          =             91
     Weights Tolerance      =       1.00E-15
 
@@ -528,21 +544,21 @@ Total time:
   -Total Gradient:
      Atom            X                  Y                   Z
     ------   -----------------  -----------------  -----------------
-       1       -0.053711203759     0.020230422086     0.020484937281
-       2        0.088144308756    -0.056955388388    -0.098795251407
-       3       -0.018249208864    -0.000177125114     0.036036231643
-       4       -0.016186409879     0.036903289015     0.042280178573
+       1       -0.053711203245     0.020230423042     0.020484937946
+       2        0.088144309430    -0.056955387381    -0.098795255032
+       3       -0.018249211051    -0.000177125207     0.036036234286
+       4       -0.016186408879     0.036903287146     0.042280178890
 
 
-*** tstop() called on Samuels-MacBook-Pro.local at Mon Oct 26 14:23:02 2026
+*** tstop() called on Samuels-MacBook-Pro.local at Wed Nov  4 14:27:50 2026
 Module time:
-	user time   =       1.10 seconds =       0.02 minutes
+	user time   =       1.08 seconds =       0.02 minutes
 	system time =       0.02 seconds =       0.00 minutes
-	total time  =          1 seconds =       0.02 minutes
+	total time  =          0 seconds =       0.00 minutes
 Total time:
-	user time   =       8.58 seconds =       0.14 minutes
-	system time =       0.14 seconds =       0.00 minutes
-	total time  =          3 seconds =       0.05 minutes
+	user time   =       7.66 seconds =       0.13 minutes
+	system time =       0.15 seconds =       0.00 minutes
+	total time  =          2 seconds =       0.03 minutes
 
 
 Properties will be evaluated at   0.000000,   0.000000,   0.000000 [a0]
@@ -566,18 +582,18 @@ OEProp: No title given, name of density matrix used for the following properties
  Quadrupole XZ       :          0.1098635           -0.0317425            0.0781210
  Quadrupole YY       :         -6.5112385            3.6066215           -2.9046170
  Quadrupole YZ       :         -0.3465910            0.5790456            0.2324546
- Quadrupole ZZ       :         -6.7913939            4.2514438           -2.5399501
+ Quadrupole ZZ       :         -6.7913938            4.2514438           -2.5399500
  Traceless XX        :         -0.0532444            0.2245232            0.1712787
  Traceless YY        :          0.1666999           -0.4346727           -0.2679728
- Traceless ZZ        :         -0.1134555            0.2101496            0.0966941
+ Traceless ZZ        :         -0.1134554            0.2101496            0.0966941
 
  ------------------------------------------------------------------------------------
   Mulliken Charges: (a.u.)
    Center  Symbol    Alpha    Beta     Spin     Total
-       1     H     0.31362  0.31362 -0.00000  0.37276
-       2     O     4.01532  4.01532  0.00000 -0.03064
+       1     H     0.31362  0.31362  0.00000  0.37276
+       2     O     4.01532  4.01532 -0.00000 -0.03064
        3     H     0.35048  0.35048 -0.00000  0.29904
-       4     H     0.32058  0.32058 -0.00000  0.35884
+       4     H     0.32058  0.32058  0.00000  0.35884
 
    Total alpha =  5.00000, Total beta =  5.00000, Total charge =  1.00000
 
@@ -585,8 +601,8 @@ OEProp: No title given, name of density matrix used for the following properties
    Center  Symbol    Alpha    Beta     Spin     Total
        1     H     0.43595  0.43595 -0.00000  0.12809
        2     O     3.61156  3.61156  0.00000  0.77688
-       3     H     0.50632  0.50632  0.00000 -0.01264
-       4     H     0.44617  0.44617 -0.00000  0.10767
+       3     H     0.50632  0.50632 -0.00000 -0.01264
+       4     H     0.44617  0.44617  0.00000  0.10767
 
   Total alpha =  5.00000, Total beta =  5.00000, Total charge =  1.00000
 
@@ -598,10 +614,10 @@ OEProp: No title given, name of density matrix used for the following properties
 
                  1                   2                   3                   4
 
-    1     0.00000000000000     0.84918413972218     0.02008637867654     0.01963604611617
-    2     0.84918413972218     0.00000000000000     0.90366206271839     0.85391577681842
-    3     0.02008637867654     0.90366206271839     0.00000000000000     0.03087513491611
-    4     0.01963604611617     0.85391577681842     0.03087513491611     0.00000000000000
+    1     0.00000000000000     0.84918413825572     0.02008637666558     0.01963605112339
+    2     0.84918413825572     0.00000000000000     0.90366206738377     0.85391577484483
+    3     0.02008637666558     0.90366206738377     0.00000000000000     0.03087513788397
+    4     0.01963605112339     0.85391577484483     0.03087513788397     0.00000000000000
 
 
 
@@ -610,10 +626,10 @@ OEProp: No title given, name of density matrix used for the following properties
 
                  1                   2                   3                   4
 
-    1     0.00000000000000     0.42459206986081     0.01004318933815     0.00981802305808
-    2     0.42459206986081     0.00000000000000     0.45183103135907     0.42695788840882
-    3     0.01004318933815     0.45183103135907     0.00000000000000     0.01543756745797
-    4     0.00981802305808     0.42695788840882     0.01543756745797     0.00000000000000
+    1     0.00000000000000     0.42459206912792     0.01004318833278     0.00981802556176
+    2     0.42459206912792     0.00000000000000     0.45183103369155     0.42695788742272
+    3     0.01004318833278     0.45183103369155     0.00000000000000     0.01543756894197
+    4     0.00981802556176     0.42695788742272     0.01543756894197     0.00000000000000
 
 
 
@@ -622,10 +638,10 @@ OEProp: No title given, name of density matrix used for the following properties
 
                  1                   2                   3                   4
 
-    1     0.00000000000000     0.42459206986137     0.01004318933839     0.00981802305808
-    2     0.42459206986137     0.00000000000000     0.45183103135932     0.42695788840960
-    3     0.01004318933839     0.45183103135932     0.00000000000000     0.01543756745813
-    4     0.00981802305808     0.42695788840960     0.01543756745813     0.00000000000000
+    1     0.00000000000000     0.42459206912781     0.01004318833280     0.00981802556163
+    2     0.42459206912781     0.00000000000000     0.45183103369222     0.42695788742210
+    3     0.01004318833280     0.45183103369222     0.00000000000000     0.01543756894200
+    4     0.00981802556163     0.42695788742210     0.01543756894200     0.00000000000000
 
 
 
@@ -633,10 +649,10 @@ OEProp: No title given, name of density matrix used for the following properties
 
  #  #
  Irrep: 1
-      1:    0.888906564514881
-      2:    2.606761979258981
-      3:    0.954623576311033
-      4:    0.904426957850689
+      1:    0.888906566044698
+      2:    2.606761980484321
+      3:    0.954623581933323
+      4:    0.904426963852189
 
 
 
@@ -647,10 +663,10 @@ OEProp: No title given, name of density matrix used for the following properties
 
                  1                   2                   3                   4
 
-    1     0.00000000000000     1.07015751283939     0.16313399891589     0.14314585048622
-    2     1.07015751283939     0.00000000000000     1.23644157535953     1.08547085358611
-    3     0.16313399891589     1.23644157535953     0.00000000000000     0.19088054110896
-    4     0.14314585048622     1.08547085358611     0.19088054110896     0.00000000000000
+    1     0.00000000000000     1.07015751229513     0.16313399934299     0.14314585014542
+    2     1.07015751229513     0.00000000000000     1.23644157018541     1.08547085747208
+    3     0.16313399934299     1.23644157018541     0.00000000000000     0.19088054095313
+    4     0.14314585014542     1.08547085747208     0.19088054095313     0.00000000000000
 
 
 
@@ -659,10 +675,10 @@ OEProp: No title given, name of density matrix used for the following properties
 
                  1                   2                   3                   4
 
-    1     0.00000000000000     0.53507875641970     0.08156699945794     0.07157292524311
-    2     0.53507875641970     0.00000000000000     0.61822078767976     0.54273542679305
-    3     0.08156699945794     0.61822078767976     0.00000000000000     0.09544027055448
-    4     0.07157292524311     0.54273542679305     0.09544027055448     0.00000000000000
+    1     0.00000000000000     0.53507875614756     0.08156699967149     0.07157292507271
+    2     0.53507875614756     0.00000000000000     0.61822078509270     0.54273542873604
+    3     0.08156699967149     0.61822078509270     0.00000000000000     0.09544027047656
+    4     0.07157292507271     0.54273542873604     0.09544027047656     0.00000000000000
 
 
 
@@ -671,10 +687,10 @@ OEProp: No title given, name of density matrix used for the following properties
 
                  1                   2                   3                   4
 
-    1     0.00000000000000     0.53507875641969     0.08156699945795     0.07157292524311
-    2     0.53507875641969     0.00000000000000     0.61822078767976     0.54273542679306
-    3     0.08156699945795     0.61822078767976     0.00000000000000     0.09544027055449
-    4     0.07157292524311     0.54273542679306     0.09544027055449     0.00000000000000
+    1     0.00000000000000     0.53507875614757     0.08156699967150     0.07157292507271
+    2     0.53507875614757     0.00000000000000     0.61822078509271     0.54273542873604
+    3     0.08156699967150     0.61822078509271     0.00000000000000     0.09544027047656
+    4     0.07157292507271     0.54273542873604     0.09544027047656     0.00000000000000
 
 
 
@@ -682,8 +698,8 @@ OEProp: No title given, name of density matrix used for the following properties
 
  #  #
  Irrep: 1
-      1:    1.376437362241501
-      2:    3.392069941785033
-      3:    1.590456115384383
-      4:    1.419497245181295
+      1:    1.376437361783539
+      2:    3.392069939952624
+      3:    1.590456110481530
+      4:    1.419497248570632
 

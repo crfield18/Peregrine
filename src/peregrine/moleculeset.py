@@ -52,7 +52,7 @@ def _GeneralHelper_CalculateRAM(
             },
         }
     }
-    if method in coeff_dict:
+    if method in coeff_dict[package]:
         A = coeff_dict[package][method]["A"]
         x = coeff_dict[package][method]["x"]
         c = coeff_dict[package][method]["c"]
@@ -892,6 +892,7 @@ class MoleculeSet:
         psi4_command: str | None = None,
         scratch_dir: str | None = None,
         remove_negative_frequencies: bool = True,
+        resource_estimation: bool = False,
     ):
         os.makedirs(psi4_file_directory, exist_ok=True)
         if job_scheduler_used is not None:
@@ -929,6 +930,7 @@ class MoleculeSet:
                     new_local_basissets[atomic_symbol] = local_basisset
 
         OG_restricted = restricted
+        OG_set_options = set_options
         for molObj in molObj_list:
 
             # Sort local basissets
@@ -945,15 +947,41 @@ class MoleculeSet:
                     local_basissets = None
 
             # Esitmate RAM required by calculating the number of primitives
-            if max_memory is None:
-                if local_basissets is None:
-                    num_basisset_funcs = molObj.GetNumberOfBasisSetFunctions(basisset)
-                else:
-                    num_basisset_funcs = molObj.GetNumberOfBasisSetFunctions(
-                        local_basissets
-                    )
+            if local_basissets is None:
+                num_basisset_funcs = molObj.GetNumberOfBasisSetFunctions(basisset)
+            else:
+                num_basisset_funcs = molObj.GetNumberOfBasisSetFunctions(
+                    local_basissets
+                )
+            # Change to unrestricted temporarily if multiplicity is greater than one
             if restricted == True and molObj.Multiplicity > 1:
                 restricted = False
+            # Check that memory does not exceed max memory
+            # If memory exceeds the max then calculate integrals using disk
+            memory = _GeneralHelper_CalculateRAM(
+                package="Psi4",
+                method=method,
+                number_of_primitives=num_basisset_funcs,
+            )
+            print(molObj.Identifier)
+            if max_memory is not None:
+                if memory > max_memory:
+                    memory = max_memory
+                    if set_options is not None:
+                        set_options = set_options | {
+                            "scf_type": "disk_df",
+                            "scf_subtype": "out_of_core",
+                            "dft_block_max_points": 128,
+                        }
+                    else:
+                        set_options = {
+                            "scf_type": "disk_df",
+                            "scf_subtype": "out_of_core",
+                            "dft_block_max_points": 128,
+                        }
+                else:
+                    print(memory)
+            print("")
             psi4_inp, queue_sh = molObj.WritePsi4Input(
                 method=method,
                 basisset=basisset,
@@ -965,15 +993,7 @@ class MoleculeSet:
                 restricted=restricted,
                 set_options=set_options,
                 CPU_count=CPU_count,
-                max_memory=(
-                    _GeneralHelper_CalculateRAM(
-                        package="Psi4",
-                        method=method,
-                        number_of_primitives=num_basisset_funcs,
-                    )
-                    if max_memory is None
-                    else max_memory
-                ),
+                max_memory=memory,
                 max_time=max_time,
                 job_scheduler_used=job_scheduler_used,
                 file_types_to_save=file_types_to_save,
@@ -982,6 +1002,8 @@ class MoleculeSet:
             )
             if OG_restricted != restricted:
                 restricted = OG_restricted
+            if OG_set_options != set_options:
+                set_options = OG_set_options
 
             with open(f"{psi4_file_directory}/{molObj.Identifier}.py", "w") as f:
                 f.write(psi4_inp)

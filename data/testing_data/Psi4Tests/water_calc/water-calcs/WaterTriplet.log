@@ -1,6 +1,6 @@
-2026-10-26:14:23:02,772 INFO     [psi4.driver.task_planner:259] PLANNING Atomic:  keywords={'DF_BASIS_SCF': 'MYJKFIT', 'GUESS': 'CORE', 'REFERENCE': 'UHF', 'SCF_TYPE': 'DF', 'function_kwargs': {}}
-2026-10-26:14:23:02,773 INFO     [psi4.driver.driver:644] Compute gradient(): method=wb97m-d3bj, basis=mybasis, molecule=default, nre=8.84102016483414
-2026-10-26:14:23:04,405 INFO     [psi4.driver.driver:647] Return gradient(): -76.00488338359324
-2026-10-26:14:23:04,405 INFO     [psi4.driver.driver:648] [[ 0.00992717  0.02946649  0.        ]
- [ 0.0195333  -0.0195333  -0.        ]
- [-0.02946649 -0.00992717  0.        ]]
+2026-11-04:14:27:50,852 INFO     [psi4.driver.task_planner:259] PLANNING Atomic:  keywords={'DFT_BLOCK_MAX_POINTS': 128, 'DF_BASIS_SCF': 'MYJKFIT', 'GUESS': 'SAP', 'MAXITER': 200, 'REFERENCE': 'UHF', 'SCF_SUBTYPE': 'OUT_OF_CORE', 'SCF_TYPE': 'DISK_DF', 'function_kwargs': {}}
+2026-11-04:14:27:50,853 INFO     [psi4.driver.driver:644] Compute gradient(): method=wb97m-d3bj, basis=mybasis, molecule=default, nre=8.84102016483414
+2026-11-04:14:27:52,337 INFO     [psi4.driver.driver:647] Return gradient(): -76.00488338358119
+2026-11-04:14:27:52,337 INFO     [psi4.driver.driver:648] [[ 0.00992717  0.02946649  0.        ]
+ [ 0.0195333  -0.0195333   0.        ]
+ [-0.02946649 -0.00992717 -0.        ]]

@@ -7,6 +7,7 @@ import resource
 import psi4
 import basis_set_exchange as bse
 import numpy as np
+import os
 
 T = 298.15
 
@@ -16,6 +17,8 @@ def get_max_rss_mb():
         return raw / (1024 * 1024)
     return raw / 1024
 
+if platform.system().lower() == 'linux':
+    psi4.core.IOManager.shared_object().set_default_path(os.environ["PSI_SCRATCH"])
 psi4.set_output_file('Benzene.out', False)
 psi4.set_memory('1000 MB')
 psi4.set_num_threads(14)
@@ -83,8 +86,9 @@ spherical
 {combined_jkfit}
 ''', name='myjkfit', key='DF_BASIS_SCF')
 psi4.set_options({
-    'guess': 'core',
+    'guess': 'sap',
     'scf_type': 'df',
+    "maxiter": 200,
 })
 
 # Set the shell restriction
