@@ -263,7 +263,7 @@ def test_read_Psi4_UKS_output():
     assert water_cation.num_prim_basis_functions == 50
     assert water_cation.basisset["O"] == "def2-tzvppd"
     assert water_cation.basisset["H"] == "def2-tzvppd"
-    assert water_cation.calculation_method == "uhf wb97m-d3bj"
+    assert water_cation.calculation_method == "rhf wb97m-d3bj"
     water_triplet = ms.MoleculesDict["WaterTriplet"]
     assert round(water_triplet.electronic_energy, 3) == -76.005
     assert round(water_triplet.AtomsList[0].MullikenCharge, 2) == 0.36
