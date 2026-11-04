@@ -1846,8 +1846,10 @@ def get_max_rss_mb():
         return raw / (1024 * 1024)
     return raw / 1024
 
-if platform.system().lower() == 'linux':
+try:
     psi4.core.IOManager.shared_object().set_default_path(os.environ["PSI_SCRATCH"])
+except KeyError:
+    pass
 psi4.set_output_file('{identifier}.out', False)
 psi4.set_memory('{max_memory} MB')
 psi4.set_num_threads({CPU_count})
