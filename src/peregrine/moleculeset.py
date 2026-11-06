@@ -888,6 +888,7 @@ class MoleculeSet:
         max_memory: int | None = None,
         max_time: None | int = 2880,
         job_scheduler_used: None | str = "slurm",
+        slurm_partition: None | str = "high-mem",
         file_types_to_save: list[str] = [".out", ".json", ".fock"],
         psi4_command: str | None = None,
         scratch_dir: str | None = None,
@@ -931,6 +932,7 @@ class MoleculeSet:
 
         OG_restricted = restricted
         OG_set_options = set_options
+        rec_str = "Identifier,RAM (MB),Number of Primitives,\n"
         for molObj in molObj_list:
 
             # Sort local basissets
@@ -963,7 +965,6 @@ class MoleculeSet:
                 method=method,
                 number_of_primitives=num_basisset_funcs,
             )
-            print(molObj.Identifier)
             if max_memory is not None:
                 if memory > max_memory:
                     memory = max_memory
@@ -979,9 +980,6 @@ class MoleculeSet:
                             "scf_subtype": "out_of_core",
                             "dft_block_max_points": 128,
                         }
-                else:
-                    print(memory)
-            print("")
             psi4_inp, queue_sh = molObj.WritePsi4Input(
                 method=method,
                 basisset=basisset,
@@ -996,10 +994,13 @@ class MoleculeSet:
                 max_memory=memory,
                 max_time=max_time,
                 job_scheduler_used=job_scheduler_used,
+                slurm_partition=slurm_partition,
                 file_types_to_save=file_types_to_save,
                 psi4_command=psi4_command,
                 scratch_dir=scratch_dir,
             )
+            if resource_estimation == True:
+                rec_str += f"{molObj.Identifier},{memory},{num_basisset_funcs},\n"
             if OG_restricted != restricted:
                 restricted = OG_restricted
             if OG_set_options != set_options:
@@ -1017,6 +1018,9 @@ class MoleculeSet:
                 submit_jobs += f"python {molObj.Identifier}.py\n"
         with open(f"{psi4_file_directory}/submit_jobs.sh", "w") as f:
             f.write(submit_jobs)
+            f.close()
+        with open(f"{psi4_file_directory}_resrc_est.csv", "w") as f:
+            f.write(rec_str)
             f.close()
 
     def WriteCRESTInput(

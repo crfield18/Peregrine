@@ -4226,6 +4226,7 @@ rm slurm-$SLURM_JOB_ID.out
         max_memory: int = 1000,
         max_time: None | int = 2880,
         file_types_to_save: list[str] = [".out", ".json", ".fock"],
+        slurm_partition: None | str = "high-mem",
     ) -> str:
         time = _GeneralHelper_MinutesToHHMMSS(max_time)
         slurm_str = f"""#!/bin/bash
@@ -4233,6 +4234,7 @@ rm slurm-$SLURM_JOB_ID.out
 #SBATCH --time={time}
 #SBATCH --mem={max_memory}
 #SBATCH --nodes=1
+#SBATCH --partition={slurm_partition}
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task={CPU_count}
 
@@ -4285,6 +4287,7 @@ rm slurm-$SLURM_JOB_ID.out
         max_time: None | int = 2880,  # minuets
         restricted: bool = False,
         job_scheduler_used: None | str = "slurm",
+        slurm_partition: None | str = "high-mem",
         file_types_to_save: list[str] = [".out", ".json"],
         psi4_command: str | None = None,
         scratch_dir: str | None = None,
@@ -4316,6 +4319,7 @@ python {self.Identifier}.py"""
                 max_memory=max_memory,
                 max_time=max_time,
                 file_types_to_save=file_types_to_save,
+                slurm_partition=slurm_partition,
             )
         else:
             sche_str = None
