@@ -1,3 +1,0 @@
-Identifier,Method,Dispersion,Basis set,Number of primitive basis functions,RAM used (MB),Number of CPU cores used,Charge,Multiplicity,Error Code,wallclock time taken (seconds),Number of Optimisation Steps,Electronic Energy (Eh),Gibbs Free Energy (Eh),Enthalpy (Eh),Entropy (Eh),Spin Contaimination (<S**2>),Vibrational Frequency 6 (cm-1)
-WaterCation,uhf wb97m-d3bj,,"{'H': 'def2-tzvppd', 'O': 'def2-tzvppd'}",50,1123,4,1,1,,3,,-76.70878359983399,,,,7.105427357601002e-15,
-WaterTriplet,uhf wb97m-d3bj,,"{'H': 'def2-tzvppd', 'O': 'def2-tzvppd'}",41,828,4,1,2,,2,,-76.00488338358119,,,,0.0029096028779158623,
