@@ -4939,7 +4939,19 @@ end
                 if molObj.Multiplicity != multiplicity:
                     print("Need to improve this multiplicity assigning function")
         else:
-            molObj.AtomsList[0].Multiplicity = multiplicity
+            # Use the per-atom radical electrons from xyzgraph when they are
+            # consistent with the requested multiplicity (high-spin coupling);
+            # otherwise fall back to putting the multiplicity on atom 0.
+            radical_electrons = [
+                int(d.get("radical_electrons", 0) or 0)
+                for _, d in G_full.nodes(data=True)
+            ]
+            if multiplicity > 1 and sum(radical_electrons) == multiplicity - 1:
+                for atomObj, n_rad in zip(molObj.AtomsList, radical_electrons):
+                    atomObj.Multiplicity = n_rad + 1
+                molObj.GetMultiplicity()
+            else:
+                molObj.AtomsList[0].Multiplicity = multiplicity
         return molObj
 
     @classmethod
@@ -6277,7 +6289,7 @@ end
         for atomObj in self.AtomsList:
             atomObj.Coordinates = atomObj.Coordinates - geometric_midpoint
         # Rotate molecule atom by atom
-        RotationMatrix = self._GeneralHelper_GetRotationMatrix(
+        RotationMatrix = _GeneralHelper_GetRotationMatrix(
             rotation_axis=RotationVector / np.linalg.norm(RotationVector),
             theta=RotationAngle,
         )

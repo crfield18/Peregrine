@@ -1923,6 +1923,15 @@ class MoleculeSet:
         filter_failed_calc_soap_des: bool = True,
     ):
         idx = 0
+        if AtomicSymbols is None:
+            # Default to every element present in the set (dscribe needs an explicit list)
+            AtomicSymbols = sorted(
+                {
+                    atomObj.AtomicSymbol
+                    for molObj in self.MoleculesDict.values()
+                    for atomObj in molObj.AtomsList
+                }
+            )
         soap = SOAP(
             species=AtomicSymbols,
             r_cut=RadiusCutOff,

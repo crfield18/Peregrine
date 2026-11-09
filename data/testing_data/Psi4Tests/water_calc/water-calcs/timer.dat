@@ -764,3 +764,154 @@ Grad: XC                            :      0.883u      0.017s      0.136w      1
 | V_xc gradient                     :      0.304p                            815 calls
 
 **************************************************************************************
+
+Host: chrisf-lanbio-mbp.local
+
+Timers On : Mon Nov  9 18:34:37 2026
+Timers Off: Mon Nov  9 18:34:38 2026
+
+Wall Time:        0.65 seconds
+
+                                                       Time (seconds)
+Module                                       User      System        Wall        Calls
+
+--------------------------------------------------------------------------------------
+
+**************************************************************************************
+
+Host: chrisf-lanbio-mbp.local
+
+Timers On : Mon Nov  9 18:35:12 2026
+Timers Off: Mon Nov  9 18:35:13 2026
+
+Wall Time:        1.50 seconds
+
+                                                       Time (seconds)
+Module                                       User      System        Wall        Calls
+V: Grid                             :      0.033u      0.000s      0.013w      1 calls
+build grid                          :      0.017u      0.000s      0.005w      1 calls
+post-process grid                   :      0.017u      0.000s      0.008w      1 calls
+
+--------------------------------------------------------------------------------------
+V: Grid                             :      0.033u      0.000s      0.013w      1 calls
+| build grid                        :      0.017u      0.000s      0.005w      1 calls
+| post-process grid                 :      0.017u      0.000s      0.008w      1 calls
+
+**************************************************************************************
+
+Host: chrisf-lanbio-mbp.local
+
+Timers On : Mon Nov  9 18:35:50 2026
+Timers Off: Mon Nov  9 18:35:52 2026
+
+Wall Time:        2.31 seconds
+
+                                                       Time (seconds)
+Module                                       User      System        Wall        Calls
+V: Grid                             :      0.050u      0.033s      0.019w      2 calls
+build grid                          :      0.033u      0.017s      0.007w      2 calls
+post-process grid                   :      0.017u      0.017s      0.012w      2 calls
+DFH: sparsity prep                  :      0.017u      0.000s      0.011w      1 calls
+Libint2ERI::Libint2ERI              :      0.017u      0.000s      0.015w     13 calls
+DFH: initialize()                   :      0.067u      0.017s      0.023w      1 calls
+Libint2ErfERI::Libint2ErfERI        :      0.017u      0.000s      0.010w      6 calls
+DFH: AO Construction                :      0.000u      0.000s      0.002w      1 calls
+DFH: AO-Met. Contraction            :      0.017u      0.000s      0.003w      2 calls
+DFH: wAO Construction               :      0.033u      0.000s      0.003w      1 calls
+DFH: wAO Copy                       :      0.000u      0.000s      0.001w      1 calls
+HF: Form core H                     :      0.000u      0.000s      0.003w      1 calls
+HF: Form S/X                        :      0.000u      0.000s      0.002w      1 calls
+HF: Guess                           :      0.200u      0.017s      0.039w      1 calls
+SAP: Form V                         :      0.167u      0.000s      0.027w      1 calls
+Properties                          :      1.550p                           8640 calls
+Functional                          :      0.475p                           8640 calls
+V_xc                                :      1.458p                           7920 calls
+HF: Form G                          :      5.233u      0.000s      0.796w     10 calls
+RV: Form V                          :      5.183u      0.000s      0.784w     10 calls
+JK: D                               :      0.000u      0.000s      0.000w     10 calls
+JK: USO2AO                          :      0.000u      0.000s      0.000w     10 calls
+JK: JK                              :      0.050u      0.000s      0.012w     10 calls
+DFH: compute_JK()                   :      0.017u      0.000s      0.005w     10 calls
+DFH: Grabbing AOs                   :      0.000u      0.000s      0.000w     10 calls
+DFH: compute_J                      :      0.000u      0.000s      0.001w     10 calls
+DFH: compute_K                      :      0.017u      0.000s      0.003w     10 calls
+DFH: compute_wK()                   :      0.033u      0.000s      0.005w     10 calls
+JK: AO2USO                          :      0.000u      0.000s      0.000w     10 calls
+HF: Form F                          :      0.000u      0.000s      0.000w     10 calls
+HF: DIIS                            :      0.350u      0.067s      0.310w     10 calls
+HF: Form C                          :      0.000u      0.017s      0.008w     10 calls
+HF: Form D                          :      0.000u      0.000s      0.000w     10 calls
+Grad: V T Perturb                   :      0.000u      0.000s      0.001w      1 calls
+Grad: S                             :      0.000u      0.000s      0.001w      1 calls
+Grad: JK                            :      0.183u      0.017s      0.047w      1 calls
+JKGrad: Amn                         :      0.017u      0.000s      0.005w      1 calls
+JKGrad: Awmn                        :      0.033u      0.017s      0.011w      1 calls
+JKGrad: AB                          :      0.017u      0.000s      0.003w      1 calls
+JKGrad: UV                          :      0.000u      0.000s      0.000w      1 calls
+JKGrad: ABx                         :      0.000u      0.000s      0.001w      1 calls
+JKGrad: Amnx                        :      0.117u      0.000s      0.026w      1 calls
+Grad: XC                            :      0.917u      0.017s      0.140w      1 calls
+V_xc gradient                       :      0.282p                            720 calls
+
+--------------------------------------------------------------------------------------
+V: Grid                             :      0.017u      0.017s      0.009w      1 calls
+| build grid                        :      0.017u      0.017s      0.004w      1 calls
+| post-process grid                 :      0.000u      0.000s      0.006w      1 calls
+DFH: sparsity prep                  :      0.017u      0.000s      0.011w      1 calls
+| Libint2ERI::Libint2ERI            :      0.017u      0.000s      0.009w      1 calls
+DFH: initialize()                   :      0.067u      0.017s      0.023w      1 calls
+| Libint2ERI::Libint2ERI            :      0.000u      0.000s      0.002w      5 calls
+| Libint2ErfERI::Libint2ErfERI      :      0.000u      0.000s      0.002w      1 calls
+| DFH: AO Construction              :      0.000u      0.000s      0.002w      1 calls
+| DFH: AO-Met. Contraction          :      0.017u      0.000s      0.003w      2 calls
+| DFH: wAO Construction             :      0.033u      0.000s      0.003w      1 calls
+| DFH: wAO Copy                     :      0.000u      0.000s      0.001w      1 calls
+HF: Form core H                     :      0.000u      0.000s      0.003w      1 calls
+HF: Form S/X                        :      0.000u      0.000s      0.002w      1 calls
+HF: Guess                           :      0.200u      0.017s      0.039w      1 calls
+| V: Grid                           :      0.033u      0.017s      0.010w      1 calls
+| | build grid                      :      0.017u      0.000s      0.004w      1 calls
+| | post-process grid               :      0.017u      0.017s      0.006w      1 calls
+| SAP: Form V                       :      0.167u      0.000s      0.027w      1 calls
+| | Properties                      :      0.019p                            720 calls
+| | Functional                      :      0.009p                            720 calls
+| | V_xc                            :      0.077p                            720 calls
+HF: Form G                          :      5.233u      0.000s      0.796w     10 calls
+| RV: Form V                        :      5.183u      0.000s      0.784w     10 calls
+| | Properties                      :      1.309p                           7200 calls
+| | Functional                      :      0.425p                           7200 calls
+| | V_xc                            :      1.381p                           7200 calls
+| JK: D                             :      0.000u      0.000s      0.000w     10 calls
+| JK: USO2AO                        :      0.000u      0.000s      0.000w     10 calls
+| JK: JK                            :      0.050u      0.000s      0.012w     10 calls
+| | DFH: compute_JK()               :      0.017u      0.000s      0.005w     10 calls
+| | | DFH: Grabbing AOs             :      0.000u      0.000s      0.000w     10 calls
+| | | DFH: compute_J                :      0.000u      0.000s      0.001w     10 calls
+| | | DFH: compute_K                :      0.017u      0.000s      0.003w     10 calls
+| | DFH: compute_wK()               :      0.033u      0.000s      0.005w     10 calls
+| JK: AO2USO                        :      0.000u      0.000s      0.000w     10 calls
+HF: Form F                          :      0.000u      0.000s      0.000w     10 calls
+HF: DIIS                            :      0.350u      0.067s      0.310w     10 calls
+HF: Form C                          :      0.000u      0.017s      0.008w     10 calls
+HF: Form D                          :      0.000u      0.000s      0.000w     10 calls
+Grad: V T Perturb                   :      0.000u      0.000s      0.001w      1 calls
+Grad: S                             :      0.000u      0.000s      0.001w      1 calls
+Grad: JK                            :      0.183u      0.017s      0.047w      1 calls
+| JKGrad: Amn                       :      0.017u      0.000s      0.005w      1 calls
+| | Libint2ERI::Libint2ERI          :      0.000u      0.000s      0.002w      1 calls
+| JKGrad: Awmn                      :      0.033u      0.017s      0.011w      1 calls
+| | Libint2ErfERI::Libint2ErfERI    :      0.017u      0.000s      0.006w      4 calls
+| JKGrad: AB                        :      0.017u      0.000s      0.003w      1 calls
+| | Libint2ERI::Libint2ERI          :      0.000u      0.000s      0.000w      4 calls
+| JKGrad: UV                        :      0.000u      0.000s      0.000w      1 calls
+| JKGrad: ABx                       :      0.000u      0.000s      0.001w      1 calls
+| | Libint2ERI::Libint2ERI          :      0.000u      0.000s      0.000w      1 calls
+| JKGrad: Amnx                      :      0.117u      0.000s      0.026w      1 calls
+| | Libint2ERI::Libint2ERI          :      0.000u      0.000s      0.002w      1 calls
+| | Libint2ErfERI::Libint2ErfERI    :      0.000u      0.000s      0.002w      1 calls
+Grad: XC                            :      0.917u      0.017s      0.140w      1 calls
+| Properties                        :      0.223p                            720 calls
+| Functional                        :      0.042p                            720 calls
+| V_xc gradient                     :      0.282p                            720 calls
+
+**************************************************************************************

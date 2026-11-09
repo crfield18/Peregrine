@@ -138,12 +138,13 @@ def test_moleculeset_ReadMolFiles_GetSOAPDes_WriteMolFiles():
     }
     for metal in metal_mult:
         for mult in metal_mult[metal]:
-            ms = MoleculeSet()
-            ms.ReadMolFileDirectory(
+            ms = MoleculeSet.ReadMolFileDirectory(
                 f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/ReadORCA6Outputs/{metal}Lig-S{mult}_Gradient-Output"
             )
-            ms.CalculateAtomicSOAPDescriptors(
-                output_mol_file_directory=f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/AtomicDescriptors/{metal}Lig-S{mult}_SOAP-5-2-2",
+            ms.CalculateSOAPDescriptors(
                 NumRadialBasisFunctions=2,
                 MaxDegreeSphericalHarm=2,
+            )
+            ms.WriteMolFileDirectory(
+                f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/AtomicDescriptors/{metal}Lig-S{mult}_SOAP-5-2-2"
             )
