@@ -711,7 +711,7 @@ def test_OptimiseGeometry():
 
 def test_OptimiseGeometry_tblite():
     with open(
-        f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/AtomicDescriptors/CoIILig-S2_SOAP-5-2-2/BIHGEE-S4_opt0.mol",
+        f"{str(Path(__file__).parent.parent).replace("\\", "/")}/data/testing_data/ReadORCA6Outputs/CoIILig-S2_Gradient-Output/BIHGEE-S4_opt0.mol",
         "r",
     ) as f:
         molecule_str = f.read()

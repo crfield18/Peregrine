@@ -21,15 +21,13 @@ data/testing_data/ReadORCA6Outputs/Mn*
 
 # .mol files parsed from ORCA outputs (test_moleculeset_ReadORCA6OptOutput,
 # test_molecule_ReadORCA6OutputGradients). Two are read earlier by
-# test_molecule_core_functions::test_MoleculeToASEMolecule.
+# test_molecule_core_functions (test_MoleculeToASEMolecule, test_OptimiseGeometry_tblite).
 data/testing_data/ReadORCA6Outputs/*_Gradient-Output/*
 !data/testing_data/ReadORCA6Outputs/CoIILig-S2_Gradient-Output/BIHGEE-S4_opt0.mol
 !data/testing_data/ReadORCA6Outputs/CoIILig-S2_Gradient-Output/YUDGUA02-S4_opt21.mol
 
-# SOAP descriptor .mol files (test_moleculeset_ReadMolFiles_GetSOAPDes_WriteMolFiles).
-# BIHGEE-S4_opt0.mol is the input for test_OptimiseGeometry_tblite.
-data/testing_data/AtomicDescriptors/*/*
-!data/testing_data/AtomicDescriptors/CoIILig-S2_SOAP-5-2-2/BIHGEE-S4_opt0.mol
+# SOAP descriptor .mol files (test_moleculeset_ReadMolFiles_GetSOAPDes_WriteMolFiles)
+data/testing_data/AtomicDescriptors/
 
 # tblite optimisation outputs (test_OptimiseGeometry_tblite)
 data/testing_data/tbliteTests/
