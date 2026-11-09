@@ -33,6 +33,10 @@ dependencies:
   - geometric
   - ninja
   - h5py
+  - networkx
+  - psi4
+  - basis_set_exchange
+  - dftd3-python
   - pip:
     - xyzgraph
     - black
