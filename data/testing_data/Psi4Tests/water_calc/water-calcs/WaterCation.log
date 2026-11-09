@@ -1,7 +1,8 @@
-2026-11-04:14:27:48,57 INFO     [psi4.driver.task_planner:259] PLANNING Atomic:  keywords={'DFT_BLOCK_MAX_POINTS': 128, 'DF_BASIS_SCF': 'MYJKFIT', 'GUESS': 'SAP', 'MAXITER': 200, 'REFERENCE': 'UHF', 'SCF_SUBTYPE': 'OUT_OF_CORE', 'SCF_TYPE': 'DISK_DF', 'function_kwargs': {}}
-2026-11-04:14:27:48,58 INFO     [psi4.driver.driver:644] Compute gradient(): method=wb97m-d3bj, basis=mybasis, molecule=default, nre=13.093501320070743
-2026-11-04:14:27:50,405 INFO     [psi4.driver.driver:647] Return gradient(): -76.70878359983399
-2026-11-04:14:27:50,405 INFO     [psi4.driver.driver:648] [[-0.0537112   0.02023042  0.02048494]
- [ 0.08814431 -0.05695539 -0.09879526]
+2026-11-09:18:35:50,502 INFO     [psi4.driver.task_planner:259] PLANNING Atomic:  keywords={'DF_BASIS_SCF': 'MYJKFIT', 'GUESS': 'SAP', 'MAXITER': 200, 'REFERENCE': 'RHF', 'SCF_TYPE': 'DF', 'function_kwargs': {}}
+2026-11-09:18:35:50,503 INFO     [psi4.driver.driver:644] Compute gradient(): method=wb97m-d3bj, basis=mybasis, molecule=default, nre=13.093501320070743
+2026-11-09:18:35:50,575 WARNING  [psi4.optking:38] Some dependencies such as QCElemental have not yet finished migration to pydantic v2. If issues are encountered please downgrade pydantic or upgrade QCElemental as appropriate
+2026-11-09:18:35:52,433 INFO     [psi4.driver.driver:647] Return gradient(): -76.7087835998289
+2026-11-09:18:35:52,433 INFO     [psi4.driver.driver:648] [[-0.0537112   0.02023042  0.02048494]
+ [ 0.08814431 -0.05695539 -0.09879525]
  [-0.01824921 -0.00017713  0.03603623]
  [-0.01618641  0.03690329  0.04228018]]
