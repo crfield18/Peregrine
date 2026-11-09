@@ -20,3 +20,4 @@ __pycache__/
 *.pyc
 .DS_Store
 data/testing_data/.DS_Store
+.pytest_cache

@@ -25,6 +25,8 @@ import kmedoids
 
 from .atom import Atom
 from .molecule import Molecule
+from .config import ClusterConfig, resolve_config
+from .slurm import write_job_arrays, write_submit_script
 
 from .molecule import BohrRad_to_Angstrom
 
@@ -124,7 +126,8 @@ def _xTBHelper_FindBinary() -> str:
     Locate a standalone (non-conda) xtb binary and return its bin/ directory.
 
     Search order:
-      1. $XTB_BIN (path to the xtb executable or its bin/ directory)
+      1. $XTB_BIN, then [paths].xtb_bin in peregrine.toml
+         (path to the xtb executable or its bin/ directory)
       2. PATH
       3. ~/xtb-*/bin/xtb and ~/*/xtb-*/bin/xtb  (Linux/macOS)
       4. Spotlight (macOS only)
@@ -143,9 +146,15 @@ def _xTBHelper_FindBinary() -> str:
         if _ok(rp) and rp not in hits:
             hits.append(rp)
 
-    # 1. Explicit override
+    # 1. Explicit override ($XTB_BIN, then [paths].xtb_bin in the Peregrine config)
     if env := os.environ.get("XTB_BIN"):
         _add(os.path.join(env, "xtb") if os.path.isdir(env) else env)
+    try:
+        if cfg_xtb := resolve_config().get(None, "xtb_bin"):
+            cfg_xtb = os.path.expanduser(cfg_xtb)
+            _add(os.path.join(cfg_xtb, "xtb") if os.path.isdir(cfg_xtb) else cfg_xtb)
+    except (OSError, KeyError, ValueError):
+        pass
 
     # 2. PATH
     if p := shutil.which("xtb"):
@@ -717,9 +726,44 @@ class MoleculeSet:
             )
             shutil.rmtree(mol_file_directory)
 
+    # === Write comp chem input calculations ===
+    #
+    # Scheduler settings (scratch path, partition, account, module/conda set-up,
+    # job-array limits and resource defaults) come from the Peregrine config
+    # file; see peregrine/config.py and examples/peregrine.toml. Any argument
+    # passed explicitly overrides the config. job_scheduler_used="auto" defers
+    # to [scheduler].type; job_scheduler_used=None writes plain local commands.
+    # use_job_array=None defers to [scheduler].use_job_array (default True).
+
+    def _molecules_to_rerun(self, error_mask_fn=None) -> list:
+        """Molecules to (re)write: all, or only failures if ResultsDF exists."""
+        if self.ResultsDF is None:
+            return list(self.MoleculesDict.values())
+        df = self.ResultsDF
+        mask = df["Error Code"].notna()
+        if error_mask_fn is not None:
+            mask = mask | error_mask_fn(df)
+        identifiers = dict.fromkeys(df.loc[mask, "Identifier"])  # ordered, unique
+        return [self.MoleculesDict[i] for i in identifiers if i in self.MoleculesDict]
+
+    @staticmethod
+    def _negative_or_missing_freq6(df: pd.DataFrame) -> pd.Series:
+        col = "Vibrational Frequency 6 (cm-1)"
+        if col not in df:
+            return pd.Series(False, index=df.index)
+        freq6 = pd.to_numeric(df[col], errors="coerce")
+        return (freq6 < 0) | freq6.isna()
+
+    @staticmethod
+    def _negative_freq6(df: pd.DataFrame) -> pd.Series:
+        col = "Vibrational Frequency 6 (cm-1)"
+        if col not in df:
+            return pd.Series(False, index=df.index)
+        return pd.to_numeric(df[col], errors="coerce") < 0
+
     def WritePySCFInput(
         self,
-        pyscf_file_directory: str,
+        pyscf_file_directory: str | Path,
         method: str = "hf",
         basisset: dict | str = "def2-svp",
         ecp: list[str] | None = None,
@@ -727,29 +771,34 @@ class MoleculeSet:
         calculation_type: str = "single point",
         get_gradients: bool = True,
         get_fock_matrix: bool = True,
-        max_memory: int = 1000,  # in MB
+        max_memory: int | None = None,  # MB; None = config (default 1000)
         grid_density: int = 5,
         prune_grids: None | bool = True,
         optimisation_convergence_settings: dict | None = None,
-        job_scheduler_used: None | str = "slurm",
-        CPU_count: int = 4,
-        max_time: int = 2880,
+        job_scheduler_used: None | str = "auto",
+        CPU_count: int | None = None,  # None = config (default 4)
+        max_time: int | None = None,  # minutes; None = config (default 2880)
         solvent_model: str | None = None,
         solvent: str | None = None,
         scratch_dir: str | None = None,
+        slurm_partition: str | None = None,
+        use_job_array: bool | None = None,
+        config: "ClusterConfig | str | Path | None" = None,
     ):
+        cfg = resolve_config(config)
+        pyscf_file_directory = Path(pyscf_file_directory)
         os.makedirs(pyscf_file_directory, exist_ok=True)
-        job_scheduler_used = job_scheduler_used.lower()
-        submit_jobs = ""
-        # Resubmit previous calculations only if unsuccessful
-        if self.ResultsDF is not None:
-            df = self.ResultsDF
-            # freq6 = pd.to_numeric(df["Vibrational Frequency 6 (cm-1)"], errors="coerce")
-            mask = df["Error Code"].notna()
-            molObj_list = [self.MoleculesDict[i] for i in df.loc[mask, "Identifier"]]
-        else:
-            molObj_list = list(self.MoleculesDict.values())
+        scheduler = cfg.scheduler_type(job_scheduler_used)
+        as_array = cfg.use_job_array(use_job_array)
+        CPU_count = cfg.get("pyscf", "cpus", CPU_count)
+        max_memory = cfg.get("pyscf", "mem_mb", max_memory)
+        max_time = cfg.get("pyscf", "time_min", max_time)
+        file_types_to_save = [".fock", ".log", ".json"]
 
+        # Resubmit previous calculations only if unsuccessful
+        molObj_list = self._molecules_to_rerun()
+
+        submit_lines = []
         for molObj in molObj_list:
             pyscf_str = molObj.WritePySCFInput(
                 method=method,
@@ -769,54 +818,78 @@ class MoleculeSet:
             )
             with open(pyscf_file_directory / f"{molObj.Identifier}.py", "w") as f:
                 f.write(pyscf_str)
-                f.close()
-            if job_scheduler_used == "slurm":
+            if scheduler == "slurm" and not as_array:
                 slurm_str = molObj.WriteSLURMStringForPySCF(
                     job_name=molObj.Identifier,
                     CPU_count=CPU_count,
                     max_memory=max_memory,
                     max_time=max_time,
                     scratch_dir=scratch_dir,
+                    slurm_partition=slurm_partition,
+                    file_types_to_save=file_types_to_save,
+                    config=cfg,
                 )
                 with open(pyscf_file_directory / f"{molObj.Identifier}.sh", "w") as f:
                     f.write(slurm_str)
-                    f.close()
-                submit_jobs += f"sbatch {molObj.Identifier}.sh\n"
-        if submit_jobs != "":
-            with open(pyscf_file_directory / f"submit_jobs.sh", "w") as f:
-                f.write(submit_jobs)
-                f.close()
+                submit_lines.append(f"sbatch {molObj.Identifier}.sh")
+            elif scheduler is None:
+                submit_lines.append(
+                    f"python {molObj.Identifier}.py > {molObj.Identifier}.log"
+                )
+
+        if scheduler == "slurm" and as_array:
+            scripts = write_job_arrays(
+                pyscf_file_directory,
+                [m.Identifier for m in molObj_list],
+                cfg,
+                "pyscf",
+                cpus=CPU_count,
+                mem_mb=max_memory,
+                time_min=max_time,
+                partition=slurm_partition,
+                scratch_dir=scratch_dir,
+                file_types_to_save=file_types_to_save,
+            )
+            submit_lines += [f"sbatch {s}" for s in scripts]
+        write_submit_script(pyscf_file_directory, submit_lines)
+        if scheduler is not None:
+            cfg.dump_json(pyscf_file_directory / "peregrine_resolved.json")
 
     def WriteORCAInput(
         self,
-        orca_file_directory: str,
+        orca_file_directory: str | Path,
         method: str = "hf",
         basisset: str = "def2-svp",
         local_basissets: dict | None = None,
         ORCA_commands: str = "opt freq",
         orca_exe_path: str | None = None,
-        CPU_count: int = 4,
-        max_memory: int = 1000,  # MB
-        max_time: None | int = 2880,  # minuets
-        job_scheduler_used: None | str = "SLURM",
+        CPU_count: int | None = None,  # None = config (default 4)
+        max_memory: int | None = None,  # MB; None = config (default 1000)
+        max_time: None | int = None,  # minutes; None = config (default 2880)
+        job_scheduler_used: None | str = "auto",
         MPI_used: None | str = "OpenMPI",
-        file_types_to_save: list[str] = [".out", ".xyz"],
+        file_types_to_save: list[str] | None = None,  # None = config (.out .xyz .gbw .hess)
+        scratch_dir: str | None = None,
+        slurm_partition: str | None = None,
+        use_job_array: bool | None = None,
+        config: "ClusterConfig | str | Path | None" = None,
     ):
-        if job_scheduler_used is not None:
-            job_scheduler_used = job_scheduler_used.lower()
+        cfg = resolve_config(config)
+        orca_file_directory = Path(orca_file_directory)
         os.makedirs(orca_file_directory, exist_ok=True)
-        submit_jobs = ""
+        scheduler = cfg.scheduler_type(job_scheduler_used)
+        as_array = cfg.use_job_array(use_job_array)
+        CPU_count = cfg.get("orca", "cpus", CPU_count)
+        max_memory = cfg.get("orca", "mem_mb", max_memory)
+        max_time = cfg.get("orca", "time_min", max_time)
+        orca_exe_path = orca_exe_path or cfg.get("orca", "orca_bin")
+        file_types_to_save = cfg.get("orca", "file_types_to_save", file_types_to_save)
+
         # Resubmit previous calculations only if unsuccessful
-        if self.ResultsDF is not None:
-            df = self.ResultsDF
-            freq6 = pd.to_numeric(df["Vibrational Frequency 6 (cm-1)"], errors="coerce")
-            mask = df["Error Code"].notna() | (freq6 < 0) | freq6.isna()
-            molObj_list = [self.MoleculesDict[i] for i in df.loc[mask, "Identifier"]]
-        else:
-            molObj_list = list(self.MoleculesDict.values())
+        molObj_list = self._molecules_to_rerun(self._negative_or_missing_freq6)
+
         # Sort local basissets
         new_local_basissets = None
-        num_basisset_funcs = None
         if local_basissets is not None:
             new_local_basissets = {}
             for atomic_symbols in local_basissets:
@@ -826,7 +899,8 @@ class MoleculeSet:
                 ]
                 for atomic_symbol in atomic_symbols:
                     new_local_basissets[atomic_symbol] = local_basisset
-        # Write jobs
+
+        submit_lines = []
         for molObj in molObj_list:
 
             # Sort local basissets
@@ -850,31 +924,56 @@ class MoleculeSet:
                 CPU_count=CPU_count,
                 max_memory=max_memory,
                 max_time=max_time,
-                job_scheduler_used=job_scheduler_used,
+                # Only build per-molecule job scripts when not using arrays
+                job_scheduler_used=None if as_array else scheduler,
                 MPI_used=MPI_used,
                 file_types_to_save=file_types_to_save,
+                scratch_dir=scratch_dir,
+                slurm_partition=slurm_partition,
+                config=cfg,
             )
             with open(orca_file_directory / f"{molObj.Identifier}.inp", "w") as f:
                 f.write(orca_inp)
-                f.close()
-            if job_scheduler_used == "slurm":
-                submit_jobs += f"sbatch {molObj.Identifier}.sh\n"
+            if scheduler == "slurm" and not as_array:
+                if queue_sh is None:
+                    raise ValueError(
+                        f"No SLURM template for MPI_used={MPI_used!r}; use 'OpenMPI'"
+                    )
+                submit_lines.append(f"sbatch {molObj.Identifier}.sh")
                 with open(orca_file_directory / f"{molObj.Identifier}.sh", "w") as f:
                     f.write(queue_sh)
-                    f.close()
-            else:
+            elif scheduler is None:
                 if orca_exe_path is None:
                     raise ValueError(
-                        "orca_exe_path must be provided if job_scheduler_used is None"
+                        "orca_exe_path (or [paths].orca_bin in the config) must be "
+                        "provided if job_scheduler_used is None"
                     )
-                submit_jobs += f"{orca_exe_path}/orca {molObj.Identifier}.inp > {molObj.Identifier}.out\n"
-        with open(orca_file_directory / "submit_jobs.sh", "w") as f:
-            f.write(submit_jobs)
-            f.close()
+                submit_lines.append(
+                    f"{orca_exe_path}/orca {molObj.Identifier}.inp > {molObj.Identifier}.out"
+                )
+
+        if scheduler == "slurm" and as_array:
+            scripts = write_job_arrays(
+                orca_file_directory,
+                [m.Identifier for m in molObj_list],
+                cfg,
+                "orca",
+                cpus=CPU_count,
+                mem_mb=max_memory,
+                time_min=max_time,
+                partition=slurm_partition,
+                scratch_dir=scratch_dir,
+                file_types_to_save=file_types_to_save,
+                ORCA_commands=ORCA_commands,
+            )
+            submit_lines += [f"sbatch {s}" for s in scripts]
+        write_submit_script(orca_file_directory, submit_lines)
+        if scheduler is not None:
+            cfg.dump_json(orca_file_directory / "peregrine_resolved.json")
 
     def WritePsi4Input(
         self,
-        psi4_file_directory: str,
+        psi4_file_directory: str | Path,
         method: str = "wb97m-d3bj",
         basisset: str = "def2-tzvppd",
         local_basissets: dict | None = None,
@@ -884,38 +983,33 @@ class MoleculeSet:
         get_gradient: bool = False,
         restricted: bool = False,
         set_options: dict | None = None,
-        CPU_count: int = 4,
-        max_memory: int | None = None,
-        max_time: None | int = 2880,
-        job_scheduler_used: None | str = "slurm",
-        slurm_partition: None | str = "high-mem",
+        CPU_count: int | None = None,  # None = config (default 4)
+        max_memory: int | None = None,  # MB cap; None = [engines.psi4].max_mem_mb
+        max_time: None | int = None,  # minutes; None = config (default 2880)
+        job_scheduler_used: None | str = "auto",
+        slurm_partition: None | str = None,  # None = config (default "high-mem")
         file_types_to_save: list[str] = [".out", ".json", ".fock"],
-        psi4_command: str | None = None,
+        psi4_command: str | None = None,  # env activation; None = config setup
         scratch_dir: str | None = None,
         remove_negative_frequencies: bool = True,
         resource_estimation: bool = False,
+        use_job_array: bool | None = None,
+        config: "ClusterConfig | str | Path | None" = None,
     ):
+        cfg = resolve_config(config)
+        psi4_file_directory = Path(psi4_file_directory)
         os.makedirs(psi4_file_directory, exist_ok=True)
-        if job_scheduler_used is not None:
-            job_scheduler_used = job_scheduler_used.lower()
-        submit_jobs = ""
+        scheduler = cfg.scheduler_type(job_scheduler_used)
+        as_array = cfg.use_job_array(use_job_array)
+        CPU_count = cfg.get("psi4", "cpus", CPU_count)
+        max_time = cfg.get("psi4", "time_min", max_time)
+        max_memory = (
+            max_memory if max_memory is not None else cfg.get("psi4", "max_mem_mb")
+        )
+        fallback_memory = max_memory or cfg.get("psi4", "mem_mb")
 
         # Resubmit previous calculations only if unsuccessful
-        if self.ResultsDF is not None:
-            molObj_list = [
-                self.MoleculesDict[identifier]
-                for identifier in self.ResultsDF[
-                    self.ResultsDF["Error Code"].isna() == False
-                ].index
-            ]
-            molObj_list += [
-                self.MoleculesDict[identifier]
-                for identifier in self.ResultsDF[
-                    self.ResultsDF["Vibrational Frequency 6 (cm-1)"] < 0
-                ].index
-            ]
-        else:
-            molObj_list = self.MoleculesDict.values()
+        molObj_list = self._molecules_to_rerun(self._negative_freq6)
 
         # Sort local basissets
         new_local_basissets = None
@@ -933,6 +1027,10 @@ class MoleculeSet:
         OG_restricted = restricted
         OG_set_options = set_options
         rec_str = "Identifier,RAM (MB),Number of Primitives,\n"
+        submit_lines = []
+        # Job arrays share one --mem, so group molecules by memory bin
+        memory_bins = sorted(cfg.engine("psi4").get("memory_bins_mb") or [])
+        array_groups: dict[int, list[str]] = {}
         for molObj in molObj_list:
 
             # Sort local basissets
@@ -965,6 +1063,8 @@ class MoleculeSet:
                 method=method,
                 number_of_primitives=num_basisset_funcs,
             )
+            if memory is None:  # no RAM model for this method
+                memory = fallback_memory
             if max_memory is not None:
                 if memory > max_memory:
                     memory = max_memory
@@ -993,11 +1093,12 @@ class MoleculeSet:
                 CPU_count=CPU_count,
                 max_memory=memory,
                 max_time=max_time,
-                job_scheduler_used=job_scheduler_used,
+                job_scheduler_used=None if as_array else scheduler,
                 slurm_partition=slurm_partition,
                 file_types_to_save=file_types_to_save,
                 psi4_command=psi4_command,
                 scratch_dir=scratch_dir,
+                config=cfg,
             )
             if resource_estimation == True:
                 rec_str += f"{molObj.Identifier},{memory},{num_basisset_funcs},\n"
@@ -1006,37 +1107,54 @@ class MoleculeSet:
             if OG_set_options != set_options:
                 set_options = OG_set_options
 
-            with open(f"{psi4_file_directory}/{molObj.Identifier}.py", "w") as f:
+            with open(psi4_file_directory / f"{molObj.Identifier}.py", "w") as f:
                 f.write(psi4_inp)
-                f.close()
-            if job_scheduler_used == "slurm":
-                submit_jobs += f"sbatch {molObj.Identifier}.sh\n"
+            if scheduler == "slurm" and not as_array:
+                submit_lines.append(f"sbatch {molObj.Identifier}.sh")
                 with open(psi4_file_directory / f"{molObj.Identifier}.sh", "w") as f:
                     f.write(queue_sh)
-                    f.close()
-            elif job_scheduler_used is None:
-                submit_jobs += f"python {molObj.Identifier}.py\n"
-        with open(f"{psi4_file_directory}/submit_jobs.sh", "w") as f:
-            f.write(submit_jobs)
-            f.close()
+            elif scheduler == "slurm" and as_array:
+                mem_bin = next((b for b in memory_bins if b >= memory), int(memory))
+                array_groups.setdefault(mem_bin, []).append(molObj.Identifier)
+            elif scheduler is None:
+                submit_lines.append(f"python {molObj.Identifier}.py")
+
+        for mem_bin, identifiers in sorted(array_groups.items()):
+            scripts = write_job_arrays(
+                psi4_file_directory,
+                identifiers,
+                cfg,
+                "psi4",
+                cpus=CPU_count,
+                mem_mb=mem_bin,
+                time_min=max_time,
+                partition=slurm_partition,
+                tag=f"_mem{mem_bin}",
+                scratch_dir=scratch_dir,
+                file_types_to_save=file_types_to_save,
+                psi4_command=psi4_command,
+            )
+            submit_lines += [f"sbatch {s}" for s in scripts]
+        write_submit_script(psi4_file_directory, submit_lines)
+        if scheduler is not None:
+            cfg.dump_json(psi4_file_directory / "peregrine_resolved.json")
         with open(f"{psi4_file_directory}_resrc_est.csv", "w") as f:
             f.write(rec_str)
-            f.close()
 
     def WriteCRESTInput(
         self,
-        crest_file_directory: str,
-        activate_CREST: str,
-        CPU_count: int = 4,
-        max_memory: int = 1000,
+        crest_file_directory: str | Path,
+        activate_CREST: str | None = None,  # None = [engines.crest].setup
+        CPU_count: int | None = None,  # None = config (default 4)
+        max_memory: int | None = None,  # MB; None = config (default 1000)
         method: str = "gfn2",
         runtype: str = "imtd-gc",
         energy_window: float = 6,
         rmsd_threshold: float = 0.125,
         reference_topo: bool = False,
-        job_scheduler_used: None | str = "slurm",
+        job_scheduler_used: None | str = "auto",
         scratch_dir: str | None = None,
-        max_time: int = 2880,
+        max_time: int | None = None,  # minutes; None = config (default 2880)
         restrict_metal_ligand_bonds: bool = False,
         MD_length_ps: float = 100.0,
         tstep: float = 1.0,
@@ -1044,9 +1162,28 @@ class MoleculeSet:
         temp: float = 300.0,
         shake: int = 0,
         hmass: float = 1.0,
+        slurm_partition: str | None = None,
+        use_job_array: bool | None = None,
+        config: "ClusterConfig | str | Path | None" = None,
     ):
+        cfg = resolve_config(config)
+        crest_file_directory = Path(crest_file_directory)
         os.makedirs(crest_file_directory, exist_ok=True)
-        submit_jobs = ""
+        scheduler = cfg.scheduler_type(job_scheduler_used)
+        as_array = cfg.use_job_array(use_job_array)
+        CPU_count = cfg.get("crest", "cpus", CPU_count)
+        max_memory = cfg.get("crest", "mem_mb", max_memory)
+        max_time = cfg.get("crest", "time_min", max_time)
+        if scheduler == "slurm":
+            # Fail early rather than after writing thousands of inputs
+            cfg_scratch = cfg.get("crest", "scratch", scratch_dir)
+            if not cfg_scratch:
+                raise ValueError(
+                    "No scratch directory for CREST. Pass scratch_dir=... or set "
+                    "[paths].scratch / [engines.crest].scratch in peregrine.toml"
+                )
+
+        submit_lines = []
         for molObj in self.MoleculesDict.values():
             molObj.WriteCRESTInput(
                 crest_file_directory=crest_file_directory,
@@ -1058,7 +1195,7 @@ class MoleculeSet:
                 energy_window=energy_window,
                 rmsd_threshold=rmsd_threshold,
                 reference_topo=reference_topo,
-                job_scheduler_used=job_scheduler_used,
+                job_scheduler_used=scheduler,
                 scratch_dir=scratch_dir,
                 max_time=max_time,
                 restrict_metal_ligand_bonds=restrict_metal_ligand_bonds,
@@ -1068,14 +1205,35 @@ class MoleculeSet:
                 temp=temp,
                 shake=shake,
                 hmass=hmass,
+                slurm_partition=slurm_partition,
+                config=cfg,
+                write_job_script=not as_array,
             )
-            if job_scheduler_used == "slurm":
-                submit_jobs += (
-                    f"cd {molObj.Identifier}\nsbatch {molObj.Identifier}.sh\ncd ../\n"
+            if scheduler == "slurm" and not as_array:
+                submit_lines.append(
+                    f"cd {molObj.Identifier}\nsbatch {molObj.Identifier}.sh\ncd ../"
                 )
-        with open(crest_file_directory / "submit_jobs.sh", "w") as f:
-            f.write(submit_jobs)
-            f.close()
+
+        if scheduler == "slurm" and as_array:
+            # Each molecule keeps its own sub-directory; the task cd's into it
+            scripts = write_job_arrays(
+                crest_file_directory,
+                [m.Identifier for m in self.MoleculesDict.values()],
+                cfg,
+                "crest",
+                cpus=CPU_count,
+                mem_mb=max_memory,
+                time_min=max_time,
+                partition=slurm_partition,
+                scratch_dir=scratch_dir,
+                file_types_to_save=[".xyz", ".out", ".trj", ".inp"],
+                runtype=runtype,
+                crest_setup=activate_CREST,
+            )
+            submit_lines += [f"sbatch {s}" for s in scripts]
+        write_submit_script(crest_file_directory, submit_lines)
+        if scheduler is not None:
+            cfg.dump_json(crest_file_directory / "peregrine_resolved.json")
 
     # === Read comp chem output calculations ===
 

@@ -46,6 +46,8 @@ import networkx as nx
 import pyddx
 
 from .atom import Atom
+from .config import ClusterConfig, resolve_config
+from .slurm import render_single_job
 from .atom import ATOMIC_NUMBER_OF_PRIMITIVES
 from .atom import EXCLUDE_NON_METAL_SMARTS_PATTERN
 from .atom import NON_METAL_EXCLUDE_H_SMARTS_PATTERN
@@ -3864,7 +3866,10 @@ class Molecule:
         max_time: None | int = 2880,  # minuets
         job_scheduler_used: None | str = "SLURM",
         MPI_used: None | str = "OpenMPI",
-        file_types_to_save: list[str] = [".out", ".xyz"],
+        file_types_to_save: list[str] | None = None,  # None = config (.out .xyz .gbw .hess)
+        scratch_dir: str | None = None,
+        slurm_partition: str | None = None,
+        config: "ClusterConfig | str | None" = None,
     ) -> tuple[str, str | None]:
         ORCA_commands = ORCA_commands.lower()
         orca_str = self.WriteORCAString(
@@ -3874,6 +3879,7 @@ class Molecule:
             ORCA_commands=ORCA_commands,
             CPU_count=CPU_count,
             max_memory=max_memory,
+            maxcore_fraction=resolve_config(config).get("orca", "maxcore_fraction"),
         )
         if job_scheduler_used is not None:
             job_scheduler_used = job_scheduler_used.lower()
@@ -3887,6 +3893,9 @@ class Molecule:
                 max_time=max_time,
                 file_types_to_save=file_types_to_save,
                 ORCA_commands=ORCA_commands,
+                scratch_dir=scratch_dir,
+                slurm_partition=slurm_partition,
+                config=config,
             )
         else:
             sche_str = None
@@ -3900,8 +3909,11 @@ class Molecule:
         ORCA_commands: str = "opt freq",
         CPU_count: int = 4,
         max_memory: int = 1000,  # MB
+        maxcore_fraction: float | None = None,  # None = 0.95
     ) -> str:
-        max_memory_per_CPU_core = int((max_memory / CPU_count) * 0.95)
+        if maxcore_fraction is None:
+            maxcore_fraction = 0.95
+        max_memory_per_CPU_core = int((max_memory / CPU_count) * maxcore_fraction)
         if local_basissets is None:
             ORCA_commands = f"{basisset} {ORCA_commands}"
         else:
@@ -3916,7 +3928,9 @@ class Molecule:
 %maxcore {max_memory_per_CPU_core}
 
 """
-        if CPU_count > 1:
+        # Always written: harmless for 1 core, and lets wrapper scripts check
+        # the core count against the allocation
+        if CPU_count >= 1:
             orca_str += f"""%pal
     nprocs {CPU_count}
 end
@@ -3930,67 +3944,29 @@ end
         self,
         job_name: str,
         ORCA_commands: str,
-        file_types_to_save: list[str] = [".out", ".xyz"],
+        file_types_to_save: list[str] | None = None,  # None = config (.out .xyz .gbw .hess)
         CPU_count: int = 4,
         max_memory: int = 1000,
         max_time: None | int = 2880,
+        scratch_dir: str | None = None,
+        slurm_partition: str | None = None,
+        config: "ClusterConfig | str | None" = None,
     ) -> str:
-        time = _GeneralHelper_MinutesToHHMMSS(max_time)
-        slurm_str = f"""#!/bin/bash
-#SBATCH --job-name={job_name}
-#SBATCH --time={time}
-#SBATCH --mem={max_memory}
-#SBATCH --nodes=1
-#SBATCH --ntasks={CPU_count}
-#SBATCH --cpus-per-task=1
-
-# Load in modules
-module load openmpi
-module load orca
-orca_exe=$(which orca)
-
-# Ensure OpenMPI uses the allocated SLURM resources
-# export OMPI_MCA_btl=self,tcp
-export OMPI_MCA_orte_default_hostfile=$SLURM_JOB_NODELIST
-
-INPUT_DIR=$(pwd)
-
-# Create a scratch directory and navigate to it
-SCRATCH_DIR=/$SCRATCH/$SLURM_JOB_ID
-mkdir -p $SCRATCH_DIR
-cd $SCRATCH_DIR
-
-# Set up trap to copy .xyz files and .out file upon job termination or exit
-trap 'rsync -av "$SCRATCH_DIR/"*.xyz "$INPUT_DIR/"; echo "XYZ files copied on termination."' TERM EXIT
-trap 'rsync -av "$SCRATCH_DIR/"*.out "$INPUT_DIR/"; echo "ORCA6 OUT file copied on termination."' TERM EXIT
-
-# Copy input files to the scratch directory
-cp $INPUT_DIR/{job_name}.inp $SCRATCH_DIR
-cp $INPUT_DIR/{job_name}.gbw $SCRATCH_DIR
-
-# Run ORCA with MPI
-$orca_exe {job_name}.inp > {job_name}.out
-
-# Copy results back to permanent storage
-"""
-        for file_type in file_types_to_save:
-            file_type = file_type.replace(".", "")
-            slurm_str += f"cp *.{file_type} $INPUT_DIR/\n"
-        slurm_str += """
-# Clean up the scratch directory
-rm -rf $SCRATCH_DIR
-
-cd $INPUT_DIR
-# Remove slurm.out file
-rm slurm-$SLURM_JOB_ID.out
-
-"""
-        if "freq" in ORCA_commands:
-            slurm_str += f"""
-# Produce Vibration .xyz files if frequency calculation
-orca_pltvib_exe=$(which orca_pltvib)
-$orca_pltvib_exe {job_name}.out 6 7 8 9"""
-        return slurm_str
+        cfg = resolve_config(config)
+        file_types_to_save = cfg.get("orca", "file_types_to_save", file_types_to_save)
+        return render_single_job(
+            cfg,
+            "orca",
+            identifier=self.Identifier,
+            job_name=job_name,
+            cpus=CPU_count,
+            mem_mb=max_memory,
+            time_min=max_time,
+            partition=slurm_partition,
+            scratch_dir=scratch_dir,
+            file_types_to_save=file_types_to_save,
+            ORCA_commands=ORCA_commands,
+        )
 
     def WritePySCFInput(
         self,
@@ -4105,58 +4081,27 @@ $orca_pltvib_exe {job_name}.out 6 7 8 9"""
     def WriteSLURMStringForPySCF(
         self,
         job_name: str,
-        file_types_to_save: list[str] = [".fock", ".log", ".json", ".log"],
+        file_types_to_save: list[str] = [".fock", ".log", ".json"],
         CPU_count: int = 4,
         max_memory: int = 1000,
         max_time: None | int = 2880,
-        scratch_dir: str = "/scratch",
+        scratch_dir: str | None = None,
+        slurm_partition: str | None = None,
+        config: "ClusterConfig | str | None" = None,
     ):
-        time = _GeneralHelper_MinutesToHHMMSS(max_time)
-        slurm_str = f"""#!/bin/bash
-#SBATCH --job-name={job_name}
-#SBATCH --time={time}
-#SBATCH --mem={max_memory}
-#SBATCH --nodes=1
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task={CPU_count}
-
-# Export SLURM allocated CPUs to OpenMP and BLAS libraries
-export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
-export MKL_NUM_THREADS=$SLURM_CPUS_PER_TASK
-export OPENBLAS_NUM_THREADS=$SLURM_CPUS_PER_TASK
-
-source ~/miniforge3/etc/profile.d/conda.sh
-conda activate pyscf-env
-
-INPUT_DIR=$(pwd)
-
-# Create a scratch directory and navigate to it
-SCRATCH_DIR={scratch_dir}/$USER/$SLURM_JOB_ID
-mkdir -p $SCRATCH_DIR
-cd $SCRATCH_DIR
-
-# Copy input files to the scratch directory
-cp $INPUT_DIR/{job_name}.py $SCRATCH_DIR
-
-# Run pyscf script
-python {job_name}.py > {job_name}.log
-
-# Copy results back to permanent storage
-"""
-        for file_type in file_types_to_save:
-            file_type = file_type.replace(".", "")
-            slurm_str += f"cp *.{file_type} $INPUT_DIR/\n"
-        slurm_str += f"""
-# Clean up the scratch directory
-rm -rf $SCRATCH_DIR
-
-cd $INPUT_DIR
-# Remove slurm.out file to the job name for easier identification
-mv slurm-$SLURM_JOB_ID.out {job_name}.out
-rm slurm-$SLURM_JOB_ID.out
-
-"""
-        return slurm_str
+        cfg = resolve_config(config)
+        return render_single_job(
+            cfg,
+            "pyscf",
+            identifier=self.Identifier,
+            job_name=job_name,
+            cpus=CPU_count,
+            mem_mb=max_memory,
+            time_min=max_time,
+            partition=slurm_partition,
+            scratch_dir=scratch_dir,
+            file_types_to_save=file_types_to_save,
+        )
 
     def WritePsi4String(
         self,
@@ -4220,57 +4165,29 @@ rm slurm-$SLURM_JOB_ID.out
     def WriteSLURMStringForPsi4(
         self,
         job_name: str,
-        psi4_command: str,
-        scratch_dir: str,
+        psi4_command: str | None,
+        scratch_dir: str | None,
         CPU_count: int = 4,
         max_memory: int = 1000,
         max_time: None | int = 2880,
         file_types_to_save: list[str] = [".out", ".json", ".fock"],
-        slurm_partition: None | str = "high-mem",
+        slurm_partition: None | str = None,
+        config: "ClusterConfig | str | None" = None,
     ) -> str:
-        time = _GeneralHelper_MinutesToHHMMSS(max_time)
-        slurm_str = f"""#!/bin/bash
-#SBATCH --job-name={job_name}
-#SBATCH --time={time}
-#SBATCH --mem={max_memory}
-#SBATCH --nodes=1
-#SBATCH --partition={slurm_partition}
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task={CPU_count}
-
-INPUT_DIR=$(pwd)
-SCRATCH_DIR={scratch_dir}/$SLURM_JOB_ID
-
-PSI_TMP=$SCRATCH_DIR/psi_tmp # Psi4 integral/DF files go here if there is not enough RAM
-mkdir -p "$PSI_TMP"
-lfs setstripe -c -1 "$PSI_TMP" 2>/dev/null || true   # stripe big files across Lustre (only affects this dir)
-
-mkdir -p $SCRATCH_DIR
-cd $SCRATCH_DIR
-cp $INPUT_DIR/{job_name}.py $SCRATCH_DIR
-
-export PSI_SCRATCH=$PSI_TMP
-export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
-export MKL_NUM_THREADS=$SLURM_CPUS_PER_TASK
-export MALLOC_ARENA_MAX=2
-
-{psi4_command}
-
-# Copy results back to permanent storage
-"""
-        for file_type in file_types_to_save:
-            file_type = file_type.replace(".", "")
-            slurm_str += f"cp *.{file_type} $INPUT_DIR/\n"
-        slurm_str += """
-# Clean up the scratch directory
-rm -rf $SCRATCH_DIR
-
-cd $INPUT_DIR
-# Remove slurm.out file
-rm slurm-$SLURM_JOB_ID.out
-
-"""
-        return slurm_str
+        cfg = resolve_config(config)
+        return render_single_job(
+            cfg,
+            "psi4",
+            identifier=self.Identifier,
+            job_name=job_name,
+            cpus=CPU_count,
+            mem_mb=max_memory,
+            time_min=max_time,
+            partition=slurm_partition,
+            scratch_dir=scratch_dir,
+            file_types_to_save=file_types_to_save,
+            psi4_command=psi4_command,
+        )
 
     def WritePsi4Input(
         self,
@@ -4287,10 +4204,11 @@ rm slurm-$SLURM_JOB_ID.out
         max_time: None | int = 2880,  # minuets
         restricted: bool = False,
         job_scheduler_used: None | str = "slurm",
-        slurm_partition: None | str = "high-mem",
+        slurm_partition: None | str = None,  # None = config ([engines.psi4] default "high-mem")
         file_types_to_save: list[str] = [".out", ".json"],
         psi4_command: str | None = None,
         scratch_dir: str | None = None,
+        config: "ClusterConfig | str | None" = None,
     ) -> tuple[str, str]:
         psi4_str = self.WritePsi4String(
             method=method,
@@ -4305,12 +4223,11 @@ rm slurm-$SLURM_JOB_ID.out
             restricted=restricted,
             set_options=set_options,
         )
+        if job_scheduler_used is not None:
+            job_scheduler_used = job_scheduler_used.lower()
         if job_scheduler_used == "slurm":
-            if scratch_dir is None:
-                raise ValueError("Please provide a SCRATCH direcory path")
-            psi4_command = f"""{psi4_command}
-
-python {self.Identifier}.py"""
+            # psi4_command is the environment activation; `python <ID>.py` is
+            # appended by the template. None = [engines.psi4].setup from config.
             sche_str = self.WriteSLURMStringForPsi4(
                 job_name=self.Identifier,
                 psi4_command=psi4_command,
@@ -4320,6 +4237,7 @@ python {self.Identifier}.py"""
                 max_time=max_time,
                 file_types_to_save=file_types_to_save,
                 slurm_partition=slurm_partition,
+                config=config,
             )
         else:
             sche_str = None
@@ -4374,65 +4292,39 @@ python {self.Identifier}.py"""
 
     def WriteSLURMStringForCREST(
         self,
-        crest_command: str,
-        scratch_dir: str,
+        crest_command: str | None,
+        scratch_dir: str | None,
         runtype: str,
         CPU_count: int = 4,
         max_memory: int = 1000,
         max_time: int = 2880,
+        file_types_to_save: list[str] = [".xyz", ".out", ".trj", ".inp"],
+        slurm_partition: str | None = None,
+        config: "ClusterConfig | str | None" = None,
     ):
-        time = _GeneralHelper_MinutesToHHMMSS(max_time)
-        bash_str = f"""#!/bin/bash
-#SBATCH --job-name=CREST_{self.Identifier}
-#SBATCH --time={time}
-#SBATCH --mem={max_memory}
-#SBATCH --nodes=1
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task={CPU_count}
-
-INPUT_DIR=$(pwd)
-SCRATCH_DIR={scratch_dir}/$SLURM_JOB_ID
-
-mkdir -p $SCRATCH_DIR
-cd $SCRATCH_DIR
-
-cp $INPUT_DIR/{self.Identifier}.toml $SCRATCH_DIR
-cp $INPUT_DIR/{self.Identifier}.xyz $SCRATCH_DIR
-cp $INPUT_DIR/constraints.inp $SCRATCH_DIR
-
-{crest_command}
-
-cp *.xyz $INPUT_DIR
-cp *.out $INPUT_DIR
-cp *.trj $INPUT_DIR
-cp *.inp $INPUT_DIR
-
-rm -rf $SCRATCH_DIR
-cd $INPUT_DIR
-
-"""
-        if runtype == "dynamics":
-            bash_str += """conda deactivate crest-env
-conda activate chem-env
-python - << 'EOF'
-from pathlib import Path
-from peregrine.moleculeset import MoleculeSet
-workdir = Path.cwd()
-trj_ms = MoleculeSet.ReadTRJFile(workdir / "crest_dynamics.trj")
-sampled = trj_ms.RMSDClusterAndSelect()
-sampled.WriteXYZFileDirectory(workdir / "sampled_conformers")
-EOF
-
-rm crest_dynamics.trj
-
-"""
-        bash_str += "rm slurm-$SLURM_JOB_ID.out"
-        return bash_str
+        """``crest_command`` is the environment activation for CREST (the
+        ``crest`` call itself is added automatically). If None, the
+        ``[engines.crest].setup`` lines from the config are used."""
+        cfg = resolve_config(config)
+        return render_single_job(
+            cfg,
+            "crest",
+            identifier=self.Identifier,
+            job_name=f"CREST_{self.Identifier}",
+            cpus=CPU_count,
+            mem_mb=max_memory,
+            time_min=max_time,
+            partition=slurm_partition,
+            scratch_dir=scratch_dir,
+            file_types_to_save=file_types_to_save,
+            runtype=runtype,
+            crest_setup=crest_command,
+        )
 
     def WriteCRESTInput(
         self,
         crest_file_directory: str,
-        activate_CREST: str,
+        activate_CREST: str | None = None,
         scratch_dir: str | None = None,
         CPU_count: int = 4,
         max_memory: int = 1000,
@@ -4450,12 +4342,17 @@ rm crest_dynamics.trj
         temp: float = 300.0,
         shake: int = 0,
         hmass: float = 1.0,
+        slurm_partition: str | None = None,
+        config: "ClusterConfig | str | None" = None,
+        write_job_script: bool = True,
     ):
+        """``activate_CREST`` activates the CREST environment; None uses
+        ``[engines.crest].setup`` from the Peregrine config. Set
+        ``write_job_script=False`` when the job is submitted as part of an array."""
         constraints_file = False
         os.makedirs(f"{str(crest_file_directory)}/{self.Identifier}", exist_ok=True)
-        crest_command = f"""{activate_CREST}
-
-crest {self.Identifier}.toml --T {CPU_count} > {self.Identifier}.out"""
+        if job_scheduler_used is not None:
+            job_scheduler_used = job_scheduler_used.lower()
         # Write .XYZ input file
         with open(
             f"{str(crest_file_directory)}/{self.Identifier}/{self.Identifier}.xyz", "w"
@@ -4512,7 +4409,7 @@ crest {self.Identifier}.toml --T {CPU_count} > {self.Identifier}.out"""
             )
             f.close()
         # Write .sh slurm file
-        if job_scheduler_used == "slurm":
+        if job_scheduler_used == "slurm" and write_job_script:
             with open(
                 f"{str(crest_file_directory)}/{self.Identifier}/{self.Identifier}.sh",
                 "w",
@@ -4523,8 +4420,10 @@ crest {self.Identifier}.toml --T {CPU_count} > {self.Identifier}.out"""
                         max_memory=max_memory,
                         runtype=runtype,
                         max_time=max_time,
-                        crest_command=crest_command,
+                        crest_command=activate_CREST,
                         scratch_dir=scratch_dir,
+                        slurm_partition=slurm_partition,
+                        config=config,
                     )
                 )
                 f.close()
