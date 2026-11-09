@@ -47,6 +47,32 @@ pytest -v -s
 ```
 Make sure the pathway to the xtb binary is set.
 
+# Cluster configuration and job arrays
+
+Scheduler settings are read from a TOML config instead of being hard-coded in the job templates: scratch path, partition, account/QOS, module/conda set-up, resource defaults and job-array limits. Peregrine looks for the config in this order: `$PEREGRINE_CONFIG`, then `./peregrine.toml`, then `~/.config/peregrine/config.toml`. If none is found, it falls back to built-in defaults that match the previous templates. See [`examples/peregrine.toml`](examples/peregrine.toml) for a ready-to-use file. ORCA can also be run from a container (`[engines.orca] tool_prefix`) or handed to a site wrapper script that does its own staging (`[engines.orca] runner`). The settings that will be used can be printed with:
+
+```
+python -m peregrine.config            # or: python -m peregrine.config path/to/file.toml profile
+```
+
+By default, `WritePySCFInput`, `WriteORCAInput`, `WritePsi4Input` and `WriteCRESTInput` write Slurm **job arrays** rather than one `sbatch` script per molecule:
+
+```
+calc_dir/
+  manifest_psi4_mem8000_0.txt   # one identifier per line
+  array_psi4_mem8000_0.sh       # #SBATCH --array=1-N%max_concurrent
+  submit_jobs.sh                # sbatch array_*.sh
+  peregrine_resolved.json       # the settings used for this batch
+  logs/                         # %x_%A_%a.out, kept only for failed tasks
+```
+
+- Arrays are split into chunks of `max_array` so they stay within Slurm's `MaxArraySize`.
+- Psi4 molecules are grouped into `memory_bins_mb`, because one array shares one `--mem`.
+- On a rerun, only failed molecules are written to the new manifests.
+- Pass `use_job_array=False` (or set `use_job_array = false` in the config) to get the old one-script-per-molecule behaviour.
+- `job_scheduler_used=None` still writes plain local commands.
+- Any explicit argument, such as `scratch_dir=`, `slurm_partition=` or `CPU_count=`, overrides the config.
+
 # Description of Dependencies
 
 ## Chemistry Related Dependencies

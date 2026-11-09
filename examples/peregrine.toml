@@ -1,0 +1,65 @@
+# Peregrine cluster configuration
+#
+# Copy to ./peregrine.toml (per project) or ~/.config/peregrine/config.toml
+# (per user), or point $PEREGRINE_CONFIG at it. Select a profile with
+# $PEREGRINE_PROFILE or `default_profile` below.
+#
+# Precedence: explicit function argument > [engines.<name>] > global section
+#             > built-in default. Empty strings mean "unset".
+# Check what will be used with:  python -m peregrine.config [path] [profile]
+
+default_profile = "parallelcluster"
+
+[profiles.parallelcluster.scheduler]
+type = "slurm"              # "slurm" or "none" (write plain local commands)
+partition = "compute"
+account = ""
+qos = ""
+extra_directives = []       # e.g. ["--constraint=c6i", "--exclusive"]
+use_job_array = true        # false = one sbatch script per molecule (old behaviour)
+max_array = 1000            # keep <= MaxArraySize - 1  (scontrol show config)
+max_concurrent = 200        # %N throttle on each array; 0 = unlimited
+log_dir = "logs"
+keep_logs = false           # logs of failed tasks are always kept
+
+[profiles.parallelcluster.paths]
+scratch = "/scratch/$USER"  # expanded on the compute node, not when writing inputs
+conda_sh = "~/miniforge3/etc/profile.d/conda.sh"
+orca_bin = ""               # directory containing `orca`; empty = `which orca`
+xtb_bin = ""
+
+[profiles.parallelcluster.defaults]
+cpus = 4
+mem_mb = 4000
+time_min = 2880
+
+[profiles.parallelcluster.engines.pyscf]
+setup = ["source {conda_sh}", "conda activate pyscf-env"]
+
+[profiles.parallelcluster.engines.orca]
+setup = ["module load openmpi", "module load orca"]
+file_types_to_save = [".out", ".xyz", ".gbw", ".hess"]   # copied back from scratch
+maxcore_fraction = 0.95     # %maxcore = fraction x mem/core; ~0.75 if ORCA gets OOM-killed
+# ORCA from a container instead of modules (orca and orca_pltvib run through it):
+# tool_prefix = 'apptainer exec --pwd "$PWD" /path/to/orca.sif'
+# Or hand each input to a site wrapper that stages and copies back by itself,
+# called as `<runner> <ID>.inp` in the input directory with $OUTDIR set to it:
+# runner = "run-orca"
+
+[profiles.parallelcluster.engines.psi4]
+partition = "high-mem"
+setup = ["source {conda_sh}", "conda activate psi4-env"]
+lustre_stripe = true        # `lfs setstripe` on the Psi4 scratch dir (FSx/Lustre)
+memory_bins_mb = [8000, 16000, 32000, 64000, 128000]
+env = { MALLOC_ARENA_MAX = "2", OMP_NUM_THREADS = "$SLURM_CPUS_PER_TASK", MKL_NUM_THREADS = "$SLURM_CPUS_PER_TASK" }
+
+[profiles.parallelcluster.engines.crest]
+setup = ["source {conda_sh}", "conda activate crest-env"]
+post_env = "chem-env"       # env used for post-processing `runtype = "dynamics"`
+
+# Laptop / workstation: no scheduler, write run commands only
+[profiles.local.scheduler]
+type = "none"
+
+[profiles.local.paths]
+orca_bin = "/Applications/orca"
