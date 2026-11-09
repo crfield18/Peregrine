@@ -38,7 +38,7 @@ dependencies:
   - basis_set_exchange
   - dftd3-python
   - pip:
-    - xyzgraph
+    - xyzgraph==1.6.16
     - black
     - pyddx
     - meson
